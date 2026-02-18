@@ -1,0 +1,59 @@
+generator client {
+  provider             = "prisma-client-py"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+enum Role {
+  CUSTOMER
+  VENDOR
+  ADMIN
+}
+
+
+enum AccountStatus {
+  ACTIVE
+  SUSPEND
+  INACTIVE
+}
+
+model User {
+  id                     Int           @id @default(autoincrement())
+  fullname               String
+  email                  String        @unique
+  phonenumber            String        @unique
+  password               String
+
+
+  role                   Role          @default(CUSTOMER)
+  status                 AccountStatus @default(INACTIVE)
+  is_verified            Boolean       @default(false)
+
+
+  residentcard_frontside String
+  residentcard_backside  String
+
+
+  createdAt              DateTime      @default(now())
+  updatedAt              DateTime      @updatedAt
+
+
+  otps                   OTP[]
+}
+
+
+model OTP {
+  id        Int      @id @default(autoincrement())
+  code      String
+  expiresAt DateTime
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
