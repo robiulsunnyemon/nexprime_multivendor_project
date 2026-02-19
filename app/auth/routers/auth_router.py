@@ -1,0 +1,130 @@
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+
+from app.core.current_user import get_current_user
+from app.auth.schemas.auth_schema import (
+    ForgotPasswordRequest,
+    LoginRequest,
+    LoginResponse,
+    MessageResponse,
+    ResendOTPRequest,
+    ResetPasswordRequest,
+    TokenResponse,
+    VerifyOTPRequest,
+)
+
+from app.auth.services.auth_service import (
+    forgot_password_service,
+    get_profile_service,
+    login_service,
+    resend_otp_service,
+    reset_password_service,
+    signup_service,
+    verify_otp_service,
+)
+
+router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+# ─────────────────────────────────────────────────────────
+# POST /auth/signup
+# multipart/form-data because of image upload
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/signup",
+    status_code=status.HTTP_201_CREATED,
+    response_model=MessageResponse,
+    summary="Register a new user",
+)
+async def signup(
+    fullname: str = Form(...),
+    email: str = Form(...),
+    phonenumber: str = Form(...),
+    password: str = Form(..., min_length=6),
+    role: str = Form(default="CUSTOMER"),
+    residentcard_frontside: UploadFile = File(...),
+    residentcard_backside: UploadFile = File(...),
+):
+    return await signup_service(
+        fullname=fullname,
+        email=email,
+        phonenumber=phonenumber,
+        password=password,
+        role=role,
+        front_file=residentcard_frontside,
+        back_file=residentcard_backside,
+    )
+
+
+# ─────────────────────────────────────────────────────────
+# POST /auth/verify-otp
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/verify-otp",
+    response_model=TokenResponse,
+    summary="Verify account using OTP",
+)
+async def verify_otp(body: VerifyOTPRequest):
+    return await verify_otp_service(email=body.email, code=body.code)
+
+
+# ─────────────────────────────────────────────────────────
+# POST /auth/login
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/login",
+    response_model=LoginResponse,
+    summary="Login and receive JWT token",
+)
+async def login(body: LoginRequest):
+    return await login_service(email=body.email, password=body.password)
+
+
+# ─────────────────────────────────────────────────────────
+# POST /auth/resend-otp
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/resend-otp",
+    response_model=MessageResponse,
+    summary="Resend OTP (for signup verification)",
+)
+async def resend_otp(body: ResendOTPRequest):
+    return await resend_otp_service(email=body.email)
+
+
+# ─────────────────────────────────────────────────────────
+# POST /auth/forgot-password
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/forgot-password",
+    response_model=MessageResponse,
+    summary="Send OTP for password reset",
+)
+async def forgot_password(body: ForgotPasswordRequest):
+    return await forgot_password_service(email=body.email)
+
+
+# ─────────────────────────────────────────────────────────
+# POST /auth/reset-password
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/reset-password",
+    response_model=MessageResponse,
+    summary="Verify OTP and set new password",
+)
+async def reset_password(body: ResetPasswordRequest):
+    return await reset_password_service(
+        email=body.email,
+        code=body.code,
+        new_password=body.new_password,
+    )
+
+
+# ─────────────────────────────────────────────────────────
+# GET /auth/profile  (Protected)
+# ─────────────────────────────────────────────────────────
+@router.get(
+    "/profile",
+    summary="View logged-in user's profile",
+)
+async def get_profile(current_user=Depends(get_current_user)):
+    return await get_profile_service(current_user)

@@ -10,7 +10,10 @@ readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
     "fastapi[standard] (>=0.129.0,<0.130.0)",
-    "prisma (>=0.15.0,<0.16.0)"
+    "prisma (>=0.15.0,<0.16.0)",
+    "bcrypt (>=5.0.0,<6.0.0)",
+    "pyjwt (>=2.11.0,<3.0.0)",
+    "cloudinary (>=1.44.1,<2.0.0)"
 ]
 
 
