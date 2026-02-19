@@ -44,6 +44,40 @@ model User {
 
 
   otps                   OTP[]
+  store                  Store?
+  kycFiles               KYCFile[]
+}
+
+
+model Store {
+  id          Int      @id @default(autoincrement())
+  name        String
+  bio         String?
+  address     String
+  photo       String
+  vendorId    Int      @unique
+  vendor      User     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+enum KYCStatus {
+  PENDING
+  ACTIVE
+  REJECTED
+}
+
+
+model KYCFile {
+  id        Int       @id @default(autoincrement())
+  title     String    @default("vendor_kyc")
+  fileUrl   String
+  status    KYCStatus @default(PENDING)
+  vendorId  Int
+  vendor    User      @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
 
 

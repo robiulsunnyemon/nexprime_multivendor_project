@@ -40,7 +40,6 @@ async def signup(
     email: str = Form(...),
     phonenumber: str = Form(...),
     password: str = Form(..., min_length=6),
-    role: str = Form(default="CUSTOMER"),
     residentcard_frontside: UploadFile = File(...),
     residentcard_backside: UploadFile = File(...),
 ):
@@ -49,7 +48,7 @@ async def signup(
         email=email,
         phonenumber=phonenumber,
         password=password,
-        role=role,
+        role="CUSTOMER",
         front_file=residentcard_frontside,
         back_file=residentcard_backside,
     )

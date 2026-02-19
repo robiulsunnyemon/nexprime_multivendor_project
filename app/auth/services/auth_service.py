@@ -156,6 +156,86 @@ async def signup_service(
     return {"message": "Signup successful. OTP sent to your email.", "user_id": user.id}
 
 
+async def vendor_signup_service(
+    fullname: str,
+    email: str,
+    phonenumber: str,
+    password: str,
+    store_name: str,
+    store_bio: str | None,
+    store_address: str,
+    front_file: UploadFile,
+    back_file: UploadFile,
+    store_photo: UploadFile,
+    kyc_file: UploadFile | None = None,
+) -> dict:
+    # 1. Check if registration is enabled
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if setting and not setting.isRegistrationEnabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="We are temporarily not accepting new account registrations at this time.",
+        )
+
+    # 2. Duplicate check
+    existing = await prisma.user.find_first(
+        where={"OR": [{"email": email}, {"phonenumber": phonenumber}]}
+    )
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This Email or Phone number is already registered.",
+        )
+
+    # 3. Upload images
+    front_url = await _upload_image(front_file, folder="resident_cards")
+    back_url = await _upload_image(back_file, folder="resident_cards")
+    store_url = await _upload_image(store_photo, folder="stores")
+    
+    kyc_url = None
+    if kyc_file:
+        kyc_url = await _upload_image(kyc_file, folder="vendor_kyc")
+
+    # 4. Create User, Store and KYC (Combined)
+    user_data = {
+        "fullname": fullname,
+        "email": email,
+        "phonenumber": phonenumber,
+        "password": _hash_password(password),
+        "role": "VENDOR",
+        "residentcard_frontside": front_url,
+        "residentcard_backside": back_url,
+        "store": {
+            "create": {
+                "name": store_name,
+                "bio": store_bio,
+                "address": store_address,
+                "photo": store_url,
+            }
+        },
+    }
+    
+    if kyc_url:
+        user_data["kycFiles"] = {
+            "create": {
+                "title": "vendor_kyc",
+                "fileUrl": kyc_url,
+                "status": "PENDING"
+            }
+        }
+
+    user = await prisma.user.create(data=user_data)
+
+    # 5. Create & send OTP
+    code = await _create_otp(user.id)
+    await _send_otp_email(email, code, subject="Vendor Account Verification OTP")
+
+    return {
+        "message": "Vendor signup successful. OTP sent to your email.",
+        "user_id": user.id,
+    }
+
+
 async def verify_otp_service(email: str, code: str) -> dict:
     user = await prisma.user.find_unique(where={"email": email})
     if not user:
@@ -172,6 +252,15 @@ async def verify_otp_service(email: str, code: str) -> dict:
     )
     await prisma.otp.delete_many(where={"userId": user.id})
 
+    # KYC Check for Vendors
+    if user.role == "VENDOR":
+        kyc = await prisma.kycfile.find_first(where={"vendorId": user.id, "status": "ACTIVE"})
+        if not kyc:
+            return {
+                "message": "Verification successful. However, your KYC status is not active at this time. Kindly wait for administrator approval.",
+                "is_kyc_pending": True
+            }
+
     token = _create_access_token(user.id, user.role)
     return {"access_token": token, "token_type": "bearer"}
 
@@ -186,6 +275,15 @@ async def login_service(email: str, password: str) -> dict:
         raise HTTPException(
             status_code=403, detail="Account not verified. Please check your email."
         )
+
+    # KYC Check for Vendors
+    if user.role == "VENDOR":
+        kyc = await prisma.kycfile.find_first(where={"vendorId": user.id, "status": "ACTIVE"})
+        if not kyc:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your KYC status is not active at the moment. Kindly wait until it is approved by the administrator."
+            )
 
     status_errors = {
         "SUSPEND": "Account suspended. Please contact admin.",

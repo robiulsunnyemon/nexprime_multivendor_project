@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr, field_validator
 from enum import Enum
-
+from typing import Optional
 
 class RoleEnum(str, Enum):
     CUSTOMER = "CUSTOMER"
@@ -42,8 +42,10 @@ class ResetPasswordRequest(BaseModel):
 
 # ── Response Schemas ──────────────────────────────────────
 class TokenResponse(BaseModel):
-    access_token: str
+    access_token: Optional[str] = None
     token_type: str = "bearer"
+    message: Optional[str] = None
+    is_kyc_pending: Optional[bool] = False
 
 
 class UserOut(BaseModel):
