@@ -59,6 +59,14 @@ async def main():
         else:
             print(f"User already exists: {user_data['email']}")
 
+    # Initialize SystemSetting
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if not setting:
+        await prisma.systemsetting.create(data={"id": 1, "isRegistrationEnabled": True})
+        print("Initialized SystemSetting: Registration Enabled")
+    else:
+        print("SystemSetting already exists.")
+
     print("Seeding completed.")
     await prisma.disconnect()
 

@@ -113,6 +113,15 @@ async def signup_service(
     front_file: UploadFile,
     back_file: UploadFile,
 ) -> dict:
+    # Check if registration is enabled
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    # If setting is None, we assume registration is enabled by default
+    if setting and not setting.isRegistrationEnabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="We are temporarily not accepting new account registrations at this time.",
+        )
+
     # Duplicate check
     existing = await prisma.user.find_first(
         where={"OR": [{"email": email}, {"phonenumber": phonenumber}]}

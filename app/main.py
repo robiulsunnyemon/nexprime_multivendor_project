@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from app.database.db import prisma
 from app.auth.routers.auth_router import router as auth_router
 from app.user.routers.user_router import router as user_router
+from app.admin.routers.admin_settings_router import router as admin_settings_router
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -31,3 +32,4 @@ async def root():
 
 app.include_router(auth_router)
 app.include_router(user_router)
+app.include_router(admin_settings_router)
