@@ -66,13 +66,7 @@ async def delete_kyc_file_admin_service(file_id: int) -> dict:
     await prisma.kycfile.delete(where={"id": file_id})
     return {"message": "KYC file deleted by admin successfully."}
 
-async def update_kyc_status_service(file_id: int, status: str) -> dict:
-    kyc_file = await prisma.kycfile.find_unique(where={"id": file_id})
-    if not kyc_file:
-        raise HTTPException(status_code=404, detail="KYC file not found.")
-    
-    updated = await prisma.kycfile.update(
-        where={"id": file_id},
-        data={"status": status}
-    )
-    return {"message": f"KYC file status updated to {status}.", "kyc_file": updated}
+
+
+
+

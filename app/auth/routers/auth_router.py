@@ -19,7 +19,7 @@ from app.auth.services.auth_service import (
     resend_otp_service,
     reset_password_service,
     signup_service,
-    verify_otp_service,
+    verify_otp_service, vendor_signup_service,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -51,6 +51,35 @@ async def signup(
         role="CUSTOMER",
         front_file=residentcard_frontside,
         back_file=residentcard_backside,
+    )
+
+
+@router.post("/vendor/signup", status_code=status.HTTP_201_CREATED, summary="Combined Vendor & Store Signup")
+async def vendor_signup(
+    fullname: str = Form(...),
+    email: str = Form(...),
+    phonenumber: str = Form(...),
+    password: str = Form(..., min_length=6),
+    store_name: str = Form(...),
+    store_bio: str = Form(...),
+    store_address: str = Form(...),
+    residentcard_frontside: UploadFile = File(...),
+    residentcard_backside: UploadFile = File(...),
+    store_photo: UploadFile = File(...),
+    kyc_document: UploadFile = File(...),
+):
+    return await vendor_signup_service(
+        fullname=fullname,
+        email=email,
+        phonenumber=phonenumber,
+        password=password,
+        store_name=store_name,
+        store_bio=store_bio,
+        store_address=store_address,
+        front_file=residentcard_frontside,
+        back_file=residentcard_backside,
+        store_photo=store_photo,
+        kyc_file=kyc_document,
     )
 
 
