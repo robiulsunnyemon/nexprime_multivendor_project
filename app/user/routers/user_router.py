@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException,status
+from fastapi import APIRouter, Depends, HTTPException,status,BackgroundTasks
 from typing import List
 from app.core.current_user import get_admin
 from app.user.services.user_service import UserService
 from app.user.schemas.user_schemas import UserResponse, StatusUpdate,VendorSchema,KYCStatusUpdate
-
+from app.core.send_email import send_email
+from app.core.config import settings
 customer_router = APIRouter(prefix="/customers", tags=["Users"])
 vendor_router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
@@ -28,13 +29,13 @@ async def get_user_by_id(customer_id: int, admin=Depends(get_admin)):
 
 
 @customer_router.patch("/{customer_id}/account_status", response_model=UserResponse)
-async def update_user_status(customer_id: int, data: StatusUpdate, admin=Depends(get_admin)):
+async def update_user_status(customer_id: int,background_tasks: BackgroundTasks, data: StatusUpdate, admin=Depends(get_admin)):
     """
     Update user account status. Restricted to Admin.
     Status: ACTIVE, SUSPEND, INACTIVE
     """
     try:
-        return await UserService.update_user_status(customer_id, data.status)
+        return await UserService.update_user_status(customer_id,background_tasks, data.status)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -76,10 +77,11 @@ async def delete_user(vendor_id: int, admin=Depends(get_admin)):
         raise HTTPException(status_code=400, detail=str(e))
 
 
-@vendor_router.patch("/{vendor_id}/kyc_status", summary="Update KYC document status")
+@vendor_router.patch("/{vendor_id}/kyc_status",  summary="Update KYC document status")
 async def update_kyc_status(
     vendor_id: int,
     body: KYCStatusUpdate,
+    background_tasks: BackgroundTasks,
     admin=Depends(get_admin),
 ):
-    return await UserService.update_kyc_status_service(vendor_id=vendor_id, status=body.status)
+    return await UserService.update_kyc_status_service(vendor_id=vendor_id,background_tasks=background_tasks, status=body.status)

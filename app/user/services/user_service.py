@@ -1,6 +1,9 @@
 from app.database.db import prisma
+from fastapi import BackgroundTasks
 from app.user.schemas.user_schemas import AccountStatus
 from fastapi import HTTPException
+from app.core.send_email import send_email
+from app.core.config import settings
 
 class UserService:
     @staticmethod
@@ -16,7 +19,18 @@ class UserService:
         return await prisma.user.find_unique(where={"id": user_id,"role":"CUSTOMER"})
 
     @staticmethod
-    async def update_user_status(user_id: int, status: AccountStatus):
+    async def update_user_status(user_id: int,background_tasks:BackgroundTasks, status: AccountStatus):
+        db_user= await prisma.user.find_unique(where={"id":user_id})
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User account is not found")
+
+        background_tasks.add_task(
+            send_email,
+            db_user.email,
+            settings.EMAIL_FROM,
+            status,
+            settings.SMTP_PASS
+        )
         return await prisma.user.update(
             where={"id": user_id},
             data={"status": status}
@@ -70,11 +84,19 @@ class UserService:
         return vendors
 
     @staticmethod
-    async def update_kyc_status_service(vendor_id: int, status: str) -> dict:
+    async def update_kyc_status_service(vendor_id: int,background_tasks: BackgroundTasks,  status: str) -> dict:
         if status == "REJECTED":
             db_vendor = await prisma.user.find_unique(where={"id": vendor_id})
             if not db_vendor:
                 raise HTTPException(status_code=404, detail="Vendor account is not found")
+
+            background_tasks.add_task(
+                send_email,
+                db_vendor.email,
+                settings.EMAIL_FROM,
+                status,
+                settings.SMTP_PASS
+            )
             await prisma.user.delete(where={"id": vendor_id})
             return {"message": f"KYC file status updated to {status}."}
         kyc_file = await prisma.kycfile.find_first(where={"vendorId": vendor_id})
