@@ -50,16 +50,25 @@ class CategoryService:
 
     @staticmethod
     async def get_subcategories_by_main(identifier: Union[int, str]):
-        if isinstance(identifier, int) or identifier.isdigit():
+        if isinstance(identifier, int) or (isinstance(identifier, str) and identifier.isdigit()):
             main_cat_id = int(identifier)
             return await prisma.subcategory.find_many(
                 where={"mainCategoryId": main_cat_id},
                 order={"name": "asc"}
             )
         else:
-            main_cat = await prisma.maincategory.find_unique(where={"name": identifier})
+            # Case-insensitive search for main category name
+            main_cat = await prisma.maincategory.find_first(
+                where={
+                    "name": {
+                        "equals": identifier,
+                        "mode": "insensitive"
+                    }
+                }
+            )
             if not main_cat:
-                raise HTTPException(status_code=404, detail="Main category not found")
+                raise HTTPException(status_code=404, detail=f"Main category '{identifier}' not found")
+            
             return await prisma.subcategory.find_many(
                 where={"mainCategoryId": main_cat.id},
                 order={"name": "asc"}

@@ -104,3 +104,39 @@ class ProductService:
             data=update_payload,
             include={"categories": True}
         )
+
+    @staticmethod
+    async def get_products_filtered(
+        shop_id: Optional[int] = None,
+        subcategory_ids: Optional[List[int]] = None,
+        size: Optional[str] = None,
+        color: Optional[str] = None
+    ):
+        where = {}
+        if shop_id:
+            where["storeId"] = shop_id
+        
+        if subcategory_ids:
+            where["categories"] = {
+                "some": {
+                    "id": {"in": subcategory_ids}
+                }
+            }
+            
+        if size:
+            where["size"] = {
+                "contains": size,
+                "mode": "insensitive"
+            }
+            
+        if color:
+            where["colors"] = {
+                "contains": color,
+                "mode": "insensitive"
+            }
+            
+        return await prisma.product.find_many(
+            where=where,
+            include={"categories": True, "store": True},
+            order={"createdAt": "desc"}
+        )

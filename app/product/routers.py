@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status, HTTPException
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status, HTTPException, Query
 from typing import List, Optional
 import json
 from app.core.current_user import get_vendor
@@ -69,6 +69,21 @@ async def get_products(
         sub_category_id=sub_category_id,
         store_id=store_id
     )
+
+@router.get("/products/filter", response_model=List[ProductResponse], summary="Advanced product filtering")
+async def filter_products(
+    shop_id: Optional[int] = Query(None),
+    subcategory_ids: Optional[List[int]] = Query(None),
+    size: Optional[str] = Query(None),
+    color: Optional[str] = Query(None)
+):
+    return await ProductService.get_products_filtered(
+        shop_id=shop_id,
+        subcategory_ids=subcategory_ids,
+        size=size,
+        color=color
+    )
+
 
 @router.get("/products/{product_id}", response_model=ProductResponse, summary="Get product details")
 async def get_product(product_id: int):

@@ -9,6 +9,15 @@ class SubCategoryBase(BaseModel):
 class SubCategoryCreate(SubCategoryBase):
     mainCategoryId: int
 
+class SubCategorySimpleResponse(SubCategoryBase):
+    id: int
+    mainCategoryId: int
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
 from app.product.schemas import ProductResponse
 
 class SubCategoryResponse(SubCategoryBase):

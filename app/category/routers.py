@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from typing import List, Optional, Union
 from app.core.current_user import get_admin
 from app.category.services import CategoryService
-from app.category.schemas import MainCategoryResponse, SubCategoryResponse
+from app.category.schemas import MainCategoryResponse, SubCategoryResponse, SubCategorySimpleResponse
 
 router = APIRouter(prefix="/categories", tags=["Category Management"])
 
@@ -10,7 +10,7 @@ router = APIRouter(prefix="/categories", tags=["Category Management"])
 async def get_all_categories():
     return await CategoryService.get_all_main_categories()
 
-@router.get("/{identifier}/subcategories", response_model=List[SubCategoryResponse], summary="Get subcategories by main category ID or Name")
+@router.get("/{identifier}/subcategories", response_model=List[SubCategorySimpleResponse], summary="Get subcategories by main category ID or Name")
 async def get_subcategories(identifier: str):
     return await CategoryService.get_subcategories_by_main(identifier)
 
