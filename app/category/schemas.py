@@ -9,9 +9,13 @@ class SubCategoryBase(BaseModel):
 class SubCategoryCreate(SubCategoryBase):
     mainCategoryId: int
 
+from app.product.schemas import ProductResponse
+
 class SubCategoryResponse(SubCategoryBase):
     id: int
     mainCategoryId: int
+    product_count: Optional[int] = 0
+    products: List[ProductResponse] = []
     createdAt: datetime
     updatedAt: datetime
 

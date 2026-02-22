@@ -6,10 +6,47 @@ from typing import Optional, Union
 class CategoryService:
     @staticmethod
     async def get_all_main_categories():
-        return await prisma.maincategory.find_many(
-            include={"subCategories": True},
+        main_categories = await prisma.maincategory.find_many(
+            include={
+                "subCategories": {
+                    "include": {
+                        "products": True
+                    }
+                }
+            },
             order={"name": "asc"}
         )
+        
+        # Convert to list of dicts to add 'product_count' without Pydantic validation errors
+        results = []
+        for main_cat in main_categories:
+            main_cat_dict = main_cat.model_dump()
+            if main_cat.subCategories:
+                main_cat_dict["subCategories"] = []
+                for sub_cat in main_cat.subCategories:
+                    sub_cat_dict = sub_cat.model_dump()
+                    sub_cat_dict["products"] = [p.model_dump() for p in sub_cat.products] if sub_cat.products else []
+                    sub_cat_dict["product_count"] = len(sub_cat_dict["products"])
+                    main_cat_dict["subCategories"].append(sub_cat_dict)
+            results.append(main_cat_dict)
+                    
+        return results
+
+    @staticmethod
+    async def get_subcategory_details(subcategory_id: int):
+        sub_cat = await prisma.subcategory.find_unique(
+            where={"id": subcategory_id},
+            include={
+                "products": True
+            }
+        )
+        if not sub_cat:
+            raise HTTPException(status_code=404, detail="Sub-category not found")
+            
+        sub_cat_dict = sub_cat.model_dump()
+        sub_cat_dict["products"] = [p.model_dump() for p in sub_cat.products] if sub_cat.products else []
+        sub_cat_dict["product_count"] = len(sub_cat_dict["products"])
+        return sub_cat_dict
 
     @staticmethod
     async def get_subcategories_by_main(identifier: Union[int, str]):

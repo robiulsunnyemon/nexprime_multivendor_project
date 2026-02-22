@@ -30,3 +30,7 @@ async def delete_subcategory(
 ):
     await CategoryService.delete_subcategory(subcategory_id=subcategory_id)
     return {"message": "Sub-category deleted successfully"}
+
+@router.get("/subcategories/{subcategory_id}", response_model=SubCategoryResponse, summary="Get subcategory details with products")
+async def get_subcategory_details(subcategory_id: int):
+    return await CategoryService.get_subcategory_details(subcategory_id)

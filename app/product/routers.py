@@ -85,3 +85,54 @@ async def delete_product(
         
     await ProductService.delete_product(product_id=product_id, store_id=store.id)
     return {"message": "Product deleted successfully"}
+
+@router.patch("/vendor/products/{product_id}", response_model=ProductResponse, summary="Update product (Vendor only)")
+async def update_product(
+    product_id: int,
+    name: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    basePrice: Optional[float] = Form(None),
+    stockUnits: Optional[int] = Form(None),
+    size: Optional[str] = Form(None),
+    colors: Optional[str] = Form(None),
+    isOnSale: Optional[bool] = Form(None),
+    salePrice: Optional[float] = Form(None),
+    discountPercentage: Optional[float] = Form(None),
+    shippingResponsibility: Optional[ShippingResponsibility] = Form(None),
+    shippingCharge: Optional[float] = Form(None),
+    category_ids: Optional[str] = Form(None), 
+    images: Optional[List[UploadFile]] = File(None),
+    current_vendor=Depends(get_vendor)
+):
+    store = await prisma.store.find_unique(where={"vendorId": current_vendor.id})
+    if not store:
+        raise HTTPException(status_code=400, detail="Vendor store not found")
+
+    update_dict = {}
+    if name is not None: update_dict["name"] = name
+    if description is not None: update_dict["description"] = description
+    if basePrice is not None: update_dict["basePrice"] = basePrice
+    if stockUnits is not None: update_dict["stockUnits"] = stockUnits
+    if size is not None: update_dict["size"] = size
+    if colors is not None: update_dict["colors"] = colors
+    if isOnSale is not None: update_dict["isOnSale"] = isOnSale
+    if salePrice is not None: update_dict["salePrice"] = salePrice
+    if discountPercentage is not None: update_dict["discountPercentage"] = discountPercentage
+    if shippingResponsibility is not None: update_dict["shippingResponsibility"] = shippingResponsibility
+    if shippingCharge is not None: update_dict["shippingCharge"] = shippingCharge
+
+    cat_ids = None
+    if category_ids:
+        try:
+            cat_ids = json.loads(category_ids)
+            if not isinstance(cat_ids, list): raise ValueError
+        except ValueError:
+            raise HTTPException(status_code=400, detail="categoryIds must be a JSON array of integers e.g. '[1, 2]'")
+
+    return await ProductService.update_product(
+        product_id=product_id,
+        store_id=store.id,
+        product_data=update_dict,
+        category_ids=cat_ids,
+        image_files=images
+    )

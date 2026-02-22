@@ -70,3 +70,37 @@ class ProductService:
             raise HTTPException(status_code=403, detail="Not authorized to delete this product")
             
         return await prisma.product.delete(where={"id": product_id})
+
+    @staticmethod
+    async def update_product(
+        product_id: int,
+        store_id: int,
+        product_data: dict,
+        category_ids: Optional[List[int]] = None,
+        image_files: Optional[List[UploadFile]] = None
+    ):
+        product = await prisma.product.find_unique(where={"id": product_id})
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        if product.storeId != store_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this product")
+            
+        update_payload = {**product_data}
+        
+        if image_files:
+            new_image_urls = []
+            for file in image_files:
+                url = await upload_image_helper(file, folder="nexprime_products")
+                new_image_urls.append(url)
+            update_payload["images"] = product.images + new_image_urls
+
+        if category_ids is not None:
+            update_payload["categories"] = {
+                "set": [{"id": cid} for cid in category_ids]
+            }
+
+        return await prisma.product.update(
+            where={"id": product_id},
+            data=update_payload,
+            include={"categories": True}
+        )
