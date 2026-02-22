@@ -7,6 +7,7 @@ from app.admin.routers.admin_settings_router import router as admin_settings_rou
 from app.vendor.routers.vendor_store_router import router as vendor_store_router
 from app.vendor.routers.vendor_kyc_router import router as vendor_kyc_router
 from app.advertisement.routers import router as advertisement_router
+from app.category.routers import router as category_router
 
 
 @asynccontextmanager
@@ -39,3 +40,4 @@ app.include_router(customer_router)
 app.include_router(vendor_router)
 app.include_router(admin_settings_router)
 app.include_router(advertisement_router)
+app.include_router(category_router)
