@@ -98,3 +98,12 @@ model SystemSetting {
   id                    Int     @id @default(1)
   isRegistrationEnabled Boolean @default(true)
 }
+
+
+model Banner {
+  id        Int      @id @default(autoincrement())
+  imageUrl  String
+  link      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
