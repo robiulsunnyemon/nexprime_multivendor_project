@@ -59,6 +59,7 @@ model Store {
   vendor      User     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  products    Product[]
 }
 
 
@@ -116,12 +117,44 @@ model MainCategory {
   updatedAt     DateTime      @updatedAt
 }
 
+enum ShippingResponsibility {
+  CUSTOMER
+  VENDOR
+}
+
+model Product {
+  id                     Int                    @id @default(autoincrement())
+  name                   String
+  description            String?
+  basePrice              Float
+  stockUnits             Int                    @default(0)
+  size                   String?
+  colors                 String?
+  isOnSale               Boolean                @default(false)
+  salePrice              Float?
+  discountPercentage     Float?
+  shippingResponsibility ShippingResponsibility @default(CUSTOMER)
+  shippingCharge         Float                  @default(0)
+  images                 String[] // List of image URLs
+  
+  storeId                Int
+  store                  Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  categories             SubCategory[]          @relation("ProductCategories")
+  
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+}
+
 model SubCategory {
   id             Int          @id @default(autoincrement())
   name           String
   image          String?
   mainCategoryId Int
   mainCategory   MainCategory @relation(fields: [mainCategoryId], references: [id], onDelete: Cascade)
+  
+  products       Product[]    @relation("ProductCategories")
+  
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 }
