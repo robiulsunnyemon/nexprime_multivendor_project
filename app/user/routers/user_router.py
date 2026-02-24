@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException,status,BackgroundTasks
 from typing import List
-from app.core.current_user import get_admin
-from app.user.services.user_service import UserService
-from app.user.schemas.user_schemas import UserResponse, StatusUpdate,VendorSchema,KYCStatusUpdate
-from app.core.send_email import send_email
 from app.core.config import settings
+from app.core.current_user import get_admin, get_current_user
+from app.store.schemas import StorePublicResponse
+from app.store.services import StorePublicService
+from app.user.services.user_service import UserService
+from app.user.schemas.user_schemas import UserResponse, StatusUpdate, VendorSchema, KYCStatusUpdate
+from app.core.send_email import send_email
 customer_router = APIRouter(prefix="/customers", tags=["Users"])
 vendor_router = APIRouter(prefix="/vendors", tags=["Vendors"])
 
@@ -14,6 +16,10 @@ async def get_all_customer(admin=Depends(get_admin)):
     Get all users. Restricted to Admin.
     """
     return await UserService.get_all_customers()
+
+@customer_router.get("/me/followed-stores", response_model=List[StorePublicResponse], summary="Get stores followed by the current user")
+async def get_my_followed_stores(current_user=Depends(get_current_user)):
+    return await StorePublicService.get_followed_stores(user_id=current_user.id)
 
 @customer_router.get("/{customer_id}", response_model=UserResponse)
 async def get_user_by_id(customer_id: int, admin=Depends(get_admin)):

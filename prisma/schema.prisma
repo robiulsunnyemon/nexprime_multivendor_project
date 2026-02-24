@@ -43,6 +43,7 @@ model User {
   updatedAt              DateTime      @updatedAt
 
 
+  followedStores         Store[]       @relation("UserFollowedStores")
   otps                   OTP[]
   store                  Store?
   kycFiles               KYCFile[]
@@ -59,6 +60,7 @@ model Store {
   vendor      User     @relation(fields: [vendorId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  followers   User[]   @relation("UserFollowedStores")
   products    Product[]
 }
 

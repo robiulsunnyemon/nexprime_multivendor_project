@@ -38,3 +38,9 @@ async def get_vendor(user=Depends(get_current_user)):
     if user.role != "VENDOR":
         raise HTTPException(status_code=403, detail="Admission denied. Vendor only.")
     return user
+
+
+async def get_customer(user=Depends(get_current_user)):
+    if user.role != "CUSTOMER":
+        raise HTTPException(status_code=403, detail="Admission denied. Customer only.")
+    return user
