@@ -47,6 +47,7 @@ model User {
   otps                   OTP[]
   store                  Store?
   kycFiles               KYCFile[]
+  marketingProducts      MarketingProduct[]
 }
 
 
@@ -159,4 +160,24 @@ model SubCategory {
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+
+model MarketingProduct {
+  id                     Int                    @id @default(autoincrement())
+  name                   String
+  goodsType              String
+  location               String
+  description            String?
+  price                  Float
+  publishingFee          Float                  @default(0)
+  shippingResponsibility ShippingResponsibility @default(CUSTOMER)
+  shippingCharge         Float                  @default(0)
+  images                 String[]
+  
+  creatorId              Int
+  creator                User                   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
 }
