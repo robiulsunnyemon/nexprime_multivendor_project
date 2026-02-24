@@ -11,6 +11,7 @@ from app.category.routers import router as category_router
 from app.product.routers import router as product_router
 from app.store.routers import router as store_router
 from app.marketing_product.routers import router as marketing_product_router
+from app.admin.routers.admin_marketing_setting_router import router as admin_marketing_setting_router
 
 
 @asynccontextmanager
@@ -49,3 +50,4 @@ app.include_router(vendor_store_router)
 app.include_router(vendor_kyc_router)
 app.include_router(store_router)
 app.include_router(marketing_product_router)
+app.include_router(admin_marketing_setting_router)

@@ -104,6 +104,13 @@ model SystemSetting {
 }
 
 
+model MarketingProductSetting {
+  id                  Int     @id @default(1)
+  isPublishingEnabled Boolean @default(true)
+  publishingFee       Float   @default(0.50)
+}
+
+
 model Banner {
   id        Int      @id @default(autoincrement())
   imageUrl  String

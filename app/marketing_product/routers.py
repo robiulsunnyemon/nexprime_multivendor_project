@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, status
 from typing import List, Optional
 from app.core.current_user import get_current_user
+from app.database.db import prisma
 from app.marketing_product.schemas import (
-    MarketingProductCreate, 
+    MarketingProductCreate,
     MarketingProductWithCreatorResponse,
     ShippingResponsibility
 )
@@ -21,16 +22,36 @@ async def create_marketing_product(
     price: float = Form(...),
     shippingResponsibility: ShippingResponsibility = Form(...),
     images: List[UploadFile] = File(...),
-    current_user = Depends(get_current_user)
+    current_user=Depends(get_current_user)
 ):
-    # Depending on how the Role enum is handled in the User object, 
-    # it might be a string or the enum itself. Usually it's a string from Prisma.
+
     if str(current_user.role) != "CUSTOMER":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only customers can create marketing products"
         )
-    
+
+    setting = await prisma.marketingproductsetting.find_unique(where={"id": 1})
+
+
+    if not setting:
+        setting = await prisma.marketingproductsetting.create(
+            data={"id": 1, "isPublishingEnabled": True, "publishingFee": 0.50}
+        )
+
+
+    if not setting.isPublishingEnabled:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Product publishing is currently restricted from the admin side. Please try again later."
+        )
+
+    if round(publishingFee, 2) != round(setting.publishingFee, 2):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Please provide the correct publishing fee. Current publishing fee: ${setting.publishingFee:.2f}"
+        )
+
     product_data = MarketingProductCreate(
         name=name,
         goodsType=goodsType,
@@ -41,7 +62,7 @@ async def create_marketing_product(
         shippingResponsibility=shippingResponsibility,
         shippingCharge=shippingCharge
     )
-    
+
     return await MarketingProductService.create_marketing_product(
         product_data=product_data,
         creator_id=current_user.id,
@@ -53,7 +74,7 @@ async def get_all_marketing_products():
     return await MarketingProductService.get_all_marketing_products()
 
 @router.get("/my", response_model=List[MarketingProductWithCreatorResponse], summary="Get my marketing products")
-async def get_my_marketing_products(current_user = Depends(get_current_user)):
+async def get_my_marketing_products(current_user=Depends(get_current_user)):
     return await MarketingProductService.get_my_marketing_products(creator_id=current_user.id)
 
 @router.get("/{product_id}", response_model=MarketingProductWithCreatorResponse, summary="Get marketing product details")
