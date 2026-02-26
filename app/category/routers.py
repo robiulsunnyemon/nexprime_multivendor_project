@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, File, Form, UploadFile, status
 from typing import List, Optional, Union
 from app.core.current_user import get_admin
 from app.category.services import CategoryService
-from app.category.schemas import MainCategoryResponse, SubCategoryResponse, SubCategorySimpleResponse
+from app.category.schemas import MainCategoryResponse, SubCategoryResponse, SubCategorySimpleResponse, MainCategoryCreate, MainCategoryUpdate
 
 router = APIRouter(prefix="/categories", tags=["Category Management"])
 
@@ -34,3 +34,26 @@ async def delete_subcategory(
 @router.get("/subcategories/{subcategory_id}", response_model=SubCategoryResponse, summary="Get subcategory details with products")
 async def get_subcategory_details(subcategory_id: int):
     return await CategoryService.get_subcategory_details(subcategory_id)
+
+@router.post("/admin/main", response_model=MainCategoryResponse, status_code=status.HTTP_201_CREATED, summary="Create main category (Admin only)")
+async def create_main_category(
+    data: MainCategoryCreate,
+    admin=Depends(get_admin)
+):
+    return await CategoryService.create_main_category(name=data.name)
+
+@router.patch("/admin/main/{main_category_id}", response_model=MainCategoryResponse, summary="Update main category (Admin only)")
+async def update_main_category(
+    main_category_id: int,
+    data: MainCategoryUpdate,
+    admin=Depends(get_admin)
+):
+    return await CategoryService.update_main_category(main_category_id=main_category_id, name=data.name)
+
+@router.delete("/admin/main/{main_category_id}", summary="Delete main category (Admin only)")
+async def delete_main_category(
+    main_category_id: int,
+    admin=Depends(get_admin)
+):
+    await CategoryService.delete_main_category(main_category_id=main_category_id)
+    return {"message": "Main category deleted successfully"}

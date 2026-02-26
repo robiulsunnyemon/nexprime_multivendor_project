@@ -39,10 +39,15 @@ class ResetPasswordRequest(BaseModel):
         return v
 
 
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
 
 # ── Response Schemas ──────────────────────────────────────
 class TokenResponse(BaseModel):
     access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     message: Optional[str] = None
     is_kyc_pending: Optional[bool] = False
@@ -65,6 +70,7 @@ class UserOut(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     user: UserOut
 

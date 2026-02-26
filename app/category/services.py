@@ -94,3 +94,53 @@ class CategoryService:
         if not sub_cat:
             raise HTTPException(status_code=404, detail="Sub-category not found")
         return await prisma.subcategory.delete(where={"id": subcategory_id})
+
+    @staticmethod
+    async def create_main_category(name: str):
+        # Check if already exists
+        existing = await prisma.maincategory.find_unique(where={"name": name})
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Main category '{name}' already exists")
+        
+        return await prisma.maincategory.create(
+            data={
+                "name": name
+            },
+            include={
+                "subCategories": True
+            }
+        )
+
+    @staticmethod
+    async def update_main_category(main_category_id: int, name: str):
+        main_cat = await prisma.maincategory.find_unique(where={"id": main_category_id})
+        if not main_cat:
+            raise HTTPException(status_code=404, detail=f"Main category ID {main_category_id} not found")
+        
+        # Check if name is taken by another
+        existing = await prisma.maincategory.find_first(
+            where={
+                "name": name,
+                "NOT": {
+                    "id": main_category_id
+                }
+            }
+        )
+        if existing:
+            raise HTTPException(status_code=400, detail=f"Main category name '{name}' already in use")
+
+        return await prisma.maincategory.update(
+            where={"id": main_category_id},
+            data={"name": name},
+            include={
+                "subCategories": True
+            }
+        )
+
+    @staticmethod
+    async def delete_main_category(main_category_id: int):
+        main_cat = await prisma.maincategory.find_unique(where={"id": main_category_id})
+        if not main_cat:
+            raise HTTPException(status_code=404, detail=f"Main category ID {main_category_id} not found")
+        
+        return await prisma.maincategory.delete(where={"id": main_category_id})

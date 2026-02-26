@@ -38,6 +38,25 @@ def _create_access_token(user_id: int, role: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
 
 
+async def _create_refresh_token(user_id: int) -> str:
+    expires_at = datetime.utcnow() + timedelta(days=settings.JWT_REFRESH_EXPIRE_DAYS)
+    payload = {
+        "sub": str(user_id),
+        "exp": expires_at,
+    }
+    token = jwt.encode(payload, settings.JWT_REFRESH_SECRET, algorithm="HS256")
+    
+    # Save to DB
+    await prisma.refreshtoken.create(
+        data={
+            "token": token,
+            "userId": user_id,
+            "expiresAt": expires_at,
+        }
+    )
+    return token
+
+
 async def _send_otp_email(email: str, code: str, subject: str = "OTP Verification") -> None:
     body = (
         f"Your OTP code is: {code}\n\n"
@@ -262,7 +281,8 @@ async def verify_otp_service(email: str, code: str) -> dict:
             }
 
     token = _create_access_token(user.id, user.role)
-    return {"access_token": token, "token_type": "bearer"}
+    refresh_token = await _create_refresh_token(user.id)
+    return {"access_token": token, "refresh_token": refresh_token, "token_type": "bearer"}
 
 
 async def login_service(email: str, password: str) -> dict:
@@ -293,8 +313,10 @@ async def login_service(email: str, password: str) -> dict:
         raise HTTPException(status_code=403, detail=status_errors[user.status])
 
     token = _create_access_token(user.id, user.role)
+    refresh_token = await _create_refresh_token(user.id)
     return {
         "access_token": token,
+        "refresh_token": refresh_token,
         "token_type": "bearer",
         "user": {
             "id": user.id,
@@ -364,4 +386,37 @@ async def get_profile_service(user) -> dict:
         "residentcard_frontside": user.residentcard_frontside,
         "residentcard_backside": user.residentcard_backside,
         "createdAt": user.createdAt,
+    }
+
+
+async def refresh_token_service(refresh_token: str) -> dict:
+    try:
+        payload = jwt.decode(refresh_token, settings.JWT_REFRESH_SECRET, algorithms=["HS256"])
+        user_id = int(payload.get("sub"))
+    except jwt.ExpiredSignatureError:
+        # Cleanup expired token from DB if it exists
+        await prisma.refreshtoken.delete_many(where={"token": refresh_token})
+        raise HTTPException(status_code=401, detail="Refresh token expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid refresh token.")
+
+    # Check if token exists in DB (Standard for professional systems)
+    stored_token = await prisma.refreshtoken.find_unique(where={"token": refresh_token})
+    if not stored_token:
+        raise HTTPException(status_code=401, detail="Refresh token not found or already used.")
+
+    user = await prisma.user.find_unique(where={"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    # Token Rotation: Delete old refresh token and create a new one
+    await prisma.refreshtoken.delete(where={"id": stored_token.id})
+    
+    new_access_token = _create_access_token(user.id, user.role)
+    new_refresh_token = await _create_refresh_token(user.id)
+
+    return {
+        "access_token": new_access_token,
+        "refresh_token": new_refresh_token,
+        "token_type": "bearer"
     }

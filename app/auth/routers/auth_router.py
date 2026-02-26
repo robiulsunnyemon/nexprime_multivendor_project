@@ -10,6 +10,7 @@ from app.auth.schemas.auth_schema import (
     ResetPasswordRequest,
     TokenResponse,
     VerifyOTPRequest,
+    RefreshTokenRequest,
 )
 
 from app.auth.services.auth_service import (
@@ -20,9 +21,15 @@ from app.auth.services.auth_service import (
     reset_password_service,
     signup_service,
     verify_otp_service, vendor_signup_service,
+    refresh_token_service,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+@router.post("/refresh", response_model=TokenResponse, summary="Get a new access token using refresh token")
+async def refresh_token(body: RefreshTokenRequest):
+    return await refresh_token_service(refresh_token=body.refresh_token)
 
 
 # ─────────────────────────────────────────────────────────

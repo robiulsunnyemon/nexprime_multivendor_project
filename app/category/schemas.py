@@ -24,7 +24,7 @@ class SubCategoryResponse(SubCategoryBase):
     id: int
     mainCategoryId: int
     product_count: Optional[int] = 0
-    products: List[ProductResponse] = []
+    products: Optional[List[ProductResponse]] = []
     createdAt: datetime
     updatedAt: datetime
 
@@ -34,11 +34,17 @@ class SubCategoryResponse(SubCategoryBase):
 class MainCategoryBase(BaseModel):
     name: str
 
+class MainCategoryUpdate(MainCategoryBase):
+    pass
+
+class MainCategoryCreate(MainCategoryBase):
+    pass
+
 class MainCategoryResponse(MainCategoryBase):
     id: int
     createdAt: datetime
     updatedAt: datetime
-    subCategories: List[SubCategoryResponse] = []
+    subCategories: Optional[List[SubCategoryResponse]] = []
 
     class Config:
         from_attributes = True

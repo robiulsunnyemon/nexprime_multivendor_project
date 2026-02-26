@@ -7,6 +7,8 @@ class Settings(BaseSettings):
 
     JWT_SECRET: str = "change-me-in-production"
     JWT_EXPIRE_DAYS: int = 7
+    JWT_REFRESH_SECRET: str = "change-me-refresh-in-production"
+    JWT_REFRESH_EXPIRE_DAYS: int = 30
 
     OTP_EXPIRE_MINUTES: int = 5
 

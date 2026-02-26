@@ -8,7 +8,8 @@ async def seed_categories():
         "Grocery",
         "Wardrobe",
         "Marketplace Management",
-        "Country"
+        "Grocery Country",
+        "Wardrobe Country"
     ]
     
     for cat_name in main_categories:
