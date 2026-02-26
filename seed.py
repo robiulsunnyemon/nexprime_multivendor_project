@@ -12,14 +12,21 @@ async def main():
 
     print("--- Starting Comprehensive Seed ---")
 
-    # 1. Cleanup existing dynamic data (optional but recommended for clean testing)
-    print("Cleaning up old data...")
+    # 1. Cleanup ALL existing data for a fresh start
+    print("Cleaning up all existing data...")
+    await prisma.refreshtoken.delete_many()
+    await prisma.otp.delete_many()
+    await prisma.marketingproduct.delete_many()
     await prisma.product.delete_many()
-    await prisma.subcategory.delete_many()
+    await prisma.kycfile.delete_many()
     await prisma.store.delete_many()
-    
-    # Keep the Admin user if it exists, but we can clean others
-    # await prisma.user.delete_many(where={"role": {"not": "ADMIN"}})
+    await prisma.subcategory.delete_many()
+    await prisma.user.delete_many()
+    await prisma.maincategory.delete_many()
+    await prisma.banner.delete_many()
+    await prisma.systemsetting.delete_many()
+    await prisma.marketingproductsetting.delete_many()
+    print("Cleanup completed.")
 
     # 2. Map Main Categories
     print("Mapping Main Categories...")
