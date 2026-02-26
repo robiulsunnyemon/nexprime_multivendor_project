@@ -1,4 +1,5 @@
 from fastapi import Depends, HTTPException
+from typing import Optional
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from app.database.db import prisma
 import jwt
@@ -43,4 +44,21 @@ async def get_vendor(user=Depends(get_current_user)):
 async def get_customer(user=Depends(get_current_user)):
     if user.role != "CUSTOMER":
         raise HTTPException(status_code=403, detail="Admission denied. Customer only.")
+    return user
+
+
+async def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False)),
+):
+    if not credentials:
+        return None
+        
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        user_id = int(payload["sub"])
+    except Exception:
+        return None
+
+    user = await prisma.user.find_unique(where={"id": user_id})
     return user

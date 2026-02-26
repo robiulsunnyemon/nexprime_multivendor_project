@@ -49,6 +49,8 @@ model User {
   kycFiles               KYCFile[]
   marketingProducts      MarketingProduct[]
   refreshTokens          RefreshToken[]
+  searchHistories        SearchHistory[]
+  cartItems              CartItem[]
 }
 
 
@@ -168,6 +170,8 @@ model Product {
   
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
+
+  cartItems              CartItem[]
 }
 
 model SubCategory {
@@ -201,4 +205,29 @@ model MarketingProduct {
   
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
+}
+
+model SearchHistory {
+  id        Int      @id @default(autoincrement())
+  query     String
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model CartItem {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, productId])
+  @@index([userId])
 }

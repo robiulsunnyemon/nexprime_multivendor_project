@@ -144,3 +144,42 @@ class ProductService:
             include={"categories": True, "store": True},
             order={"createdAt": "desc"}
         )
+
+    @staticmethod
+    async def search_products(query: str, user_id: Optional[int] = None):
+        # Save search history in background (simplified here)
+        await prisma.searchhistory.create(
+            data={
+                "query": query,
+                "userId": user_id
+            }
+        )
+        
+        return await prisma.product.find_many(
+            where={
+                "OR": [
+                    {"name": {"contains": query, "mode": "insensitive"}},
+                    {"description": {"contains": query, "mode": "insensitive"}},
+                    {"size": {"contains": query, "mode": "insensitive"}},
+                    {"colors": {"contains": query, "mode": "insensitive"}},
+                    {"store": {"is": {"name": {"contains": query, "mode": "insensitive"}}}},
+                    {"categories": {"some": {"name": {"contains": query, "mode": "insensitive"}}}}
+                ]
+            },
+            include={"categories": True, "store": True},
+            order={"createdAt": "desc"}
+        )
+
+    @staticmethod
+    async def get_search_history(user_id: int, limit: int = 10):
+        return await prisma.searchhistory.find_many(
+            where={"userId": user_id},
+            order={"createdAt": "desc"},
+            take=limit
+        )
+
+    @staticmethod
+    async def clear_search_history(user_id: int):
+        return await prisma.searchhistory.delete_many(
+            where={"userId": user_id}
+        )

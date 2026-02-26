@@ -9,6 +9,7 @@ from app.vendor.routers.vendor_kyc_router import router as vendor_kyc_router
 from app.advertisement.routers import router as advertisement_router
 from app.category.routers import router as category_router
 from app.product.routers import router as product_router
+from app.product.search_routers import router as search_router
 from app.store.routers import router as store_router
 from app.marketing_product.routers import router as marketing_product_router
 from app.admin.routers.admin_marketing_setting_router import router as admin_marketing_setting_router
@@ -45,6 +46,7 @@ app.include_router(vendor_router)
 app.include_router(admin_settings_router)
 app.include_router(advertisement_router)
 app.include_router(category_router)
+app.include_router(search_router)
 app.include_router(product_router)
 app.include_router(vendor_store_router)
 app.include_router(vendor_kyc_router)

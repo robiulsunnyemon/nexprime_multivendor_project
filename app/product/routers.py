@@ -84,7 +84,6 @@ async def filter_products(
         color=color
     )
 
-
 @router.get("/products/{product_id}", response_model=ProductResponse, summary="Get product details")
 async def get_product(product_id: int):
     return await ProductService.get_product_by_id(product_id)
