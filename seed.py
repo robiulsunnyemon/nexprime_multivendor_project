@@ -23,23 +23,34 @@ async def main():
 
     # 2. Map Main Categories
     print("Mapping Main Categories...")
-    all_main_cats = await prisma.maincategory.find_many()
-    main_cat_map = {mc.name.lower(): mc.id for mc in all_main_cats}
     
-    # Ensure they exist or create if missing (User said 4 exist, but let's be safe)
-    required_main_cats = ["grocery", "country", "wardrobe"]
-    for cat in required_main_cats:
-        if cat not in main_cat_map:
-            new_cat = await prisma.maincategory.create(data={"name": cat.capitalize()})
-            main_cat_map[cat] = new_cat.id
-            print(f"Created missing MainCategory: {cat.capitalize()}")
+    # categories from seed_categories.py + original ones
+    required_main_cats = [
+        "Grocery",
+        "Wardrobe",
+        "Marketplace Management",
+        "Grocery Country",
+        "Wardrobe Country"
+    ]
+    
+    main_cat_map = {}
+    for cat_name in required_main_cats:
+        cat = await prisma.maincategory.upsert(
+            where={"name": cat_name},
+            data={
+                "create": {"name": cat_name},
+                "update": {}
+            }
+        )
+        main_cat_map[cat_name.lower()] = cat.id
+        print(f"Upserted MainCategory: {cat_name}")
 
     # 3. Create SubCategories
     print("Creating SubCategories...")
     sub_cats_data = {
         "grocery": ["Rice", "Oil", "Fish Sauce", "Milk", "Soy Sauce", "Chili Sauce"],
-        "country": ["Bangladesh", "Pakistan", "Nepal", "Vietnam"],
-        "wardrobe": ["Hoodie", "Sweatsuits", "T-shirt", "Pant", "Jacket"]
+        "grocery country": ["Bangladesh", "Pakistan", "Nepal", "Vietnam"],
+        "wardrobe country": ["Hoodie", "Sweatsuits", "T-shirt", "Pant", "Jacket"]
     }
     
     created_sub_cats = []
