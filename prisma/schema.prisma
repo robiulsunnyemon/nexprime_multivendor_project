@@ -240,3 +240,16 @@ model StaticPage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+enum FaqStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model FAQ {
+  id        Int       @id @default(autoincrement())
+  question  String
+  answer    String    @db.Text
+  status    FaqStatus @default(ACTIVE)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
