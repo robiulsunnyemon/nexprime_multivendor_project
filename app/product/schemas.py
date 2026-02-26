@@ -23,10 +23,29 @@ class ProductBase(BaseModel):
 class ProductCreate(ProductBase):
     categoryIds: List[int]
 
+class SubCategorySimple(BaseModel):
+    id: int
+    name: str
+    image: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class StoreSimpleResponse(BaseModel):
+    id: int
+    name: str
+    address: str
+    photo: str
+
+    class Config:
+        from_attributes = True
+
 class ProductResponse(ProductBase):
     id: int
     images: List[str]
     storeId: int
+    store: Optional[StoreSimpleResponse] = None
+    categories: Optional[List[SubCategorySimple]] = []
     createdAt: datetime
     updatedAt: datetime
 

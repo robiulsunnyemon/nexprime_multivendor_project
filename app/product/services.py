@@ -116,12 +116,16 @@ class ProductService:
         if shop_id:
             where["storeId"] = shop_id
         
+        # Cumulative/Intersection filtering for subcategories (AND logic)
         if subcategory_ids:
-            where["categories"] = {
-                "some": {
-                    "id": {"in": subcategory_ids}
-                }
-            }
+            if "AND" not in where:
+                where["AND"] = []
+            for sid in subcategory_ids:
+                where["AND"].append({
+                    "categories": {
+                        "some": {"id": sid}
+                    }
+                })
             
         if size:
             where["size"] = {

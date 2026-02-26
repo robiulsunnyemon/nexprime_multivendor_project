@@ -56,20 +56,22 @@ async def main():
     print("Creating SubCategories...")
     sub_cats_data = {
         "grocery": ["Rice", "Oil", "Fish Sauce", "Milk", "Soy Sauce", "Chili Sauce"],
+        "wardrobe": ["Hoodie", "Sweatsuits", "T-shirt", "Pant", "Jacket"],
         "grocery country": ["Bangladesh", "Pakistan", "Nepal", "Vietnam"],
-        "wardrobe country": ["Hoodie", "Sweatsuits", "T-shirt", "Pant", "Jacket"]
+        "wardrobe country": ["Bangladesh", "Pakistan", "Nepal", "Vietnam"]
     }
     
-    created_sub_cats = []
+    created_sub_cats_map = {} 
     for main_name, subs in sub_cats_data.items():
         main_id = main_cat_map[main_name]
+        created_sub_cats_map[main_name] = []
         for sub_name in subs:
             sc = await prisma.subcategory.create(data={
                 "name": sub_name,
                 "mainCategoryId": main_id,
                 "image": f"https://picsum.photos/seed/{sub_name}/200"
             })
-            created_sub_cats.append(sc)
+            created_sub_cats_map[main_name].append(sc)
             print(f"Created SubCategory: {sub_name} under {main_name}")
 
     # 4. Create Users (1 Admin, 10 Vendors, 10 Customers)
@@ -151,10 +153,24 @@ async def main():
     
     for i in range(1, 21):
         store = random.choice(vendors)
-        # Link to 1-3 random subcategories
-        num_subs = random.randint(1, 3)
-        subs_to_link = random.sample(created_sub_cats, num_subs)
         
+        # Decide if this is a Grocery or Wardrobe product
+        group = random.choice(["grocery", "wardrobe"])
+        
+        main_subs = created_sub_cats_map[group]
+        country_subs = created_sub_cats_map[f"{group} country"]
+        
+        # Pick at least one from main and one from country (Intersection requirement)
+        sub1 = random.choice(main_subs)
+        sub2 = random.choice(country_subs)
+        subs_to_link = [sub1, sub2]
+        
+        # Possibly add some more random ones from the same group
+        if random.random() > 0.7:
+            extra = random.choice(main_subs + country_subs)
+            if extra.id not in [s.id for s in subs_to_link]:
+                subs_to_link.append(extra)
+
         price = round(random.uniform(10.0, 500.0), 2)
         
         await prisma.product.create(data={
@@ -174,7 +190,7 @@ async def main():
                 "connect": [{"id": sc.id} for sc in subs_to_link]
             }
         })
-        print(f"Created Product {i} in Store {store.id}")
+        print(f"Created Product {i} ({group}) in Store {store.id} with categories: {[s.name for s in subs_to_link]}")
 
     # 6. Create KYC Files for Vendors
     print("Creating KYC Files for Vendors...")
