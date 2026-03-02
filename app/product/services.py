@@ -16,14 +16,50 @@ class ProductService:
             url = await upload_image_helper(file, folder="nexprime_products")
             image_urls.append(url)
         
-        # Connect to subcategories
+        # Connecting to subcategories
         category_connect = [{"id": cid} for cid in product_data.categoryIds]
         
+        # --- Logic for isDiscountSale and Calculations ---
+        base_price = product_data.basePrice
+        sale_price = product_data.salePrice
+        is_discount_sale = product_data.isDiscountSale
+        discount_percentage = 0.0
+
+        if not is_discount_sale:
+            sale_price = base_price
+            discount_percentage = 0.0
+        else:
+            if sale_price is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Sale price must be provided when product is on discount sale"
+                )
+            if sale_price >= base_price:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Sale price must be less than base price when product is on discount sale"
+                )
+            # Calculate discountPercentage
+            discount_percentage = round(((base_price - sale_price) / base_price) * 100, 2)
+
+        # --- Logic for total_payable_amount ---
+        shipping_charge = product_data.shippingCharge
+        shipping_responsibility = product_data.shippingResponsibility
+        
+        if shipping_responsibility == "CUSTOMER":
+            total_payable_amount = sale_price + shipping_charge
+        else:
+            total_payable_amount = sale_price
+
         return await prisma.product.create(
             data={
-                **product_data.model_dump(exclude={"categoryIds"}),
+                **product_data.model_dump(exclude={"categoryIds", "discountPercentage", "salePrice", "isDiscountSale", "total_payable_amount"}),
                 "storeId": store_id,
                 "images": image_urls,
+                "isDiscountSale": is_discount_sale,
+                "salePrice": sale_price,
+                "discountPercentage": discount_percentage,
+                "total_payable_amount": total_payable_amount,
                 "categories": {
                     "connect": category_connect
                 }
@@ -87,6 +123,50 @@ class ProductService:
             
         update_payload = {**product_data}
         
+        # Remove discountPercentage from payload to prevent manual input
+        if "discountPercentage" in update_payload:
+            del update_payload["discountPercentage"]
+
+        # --- Logic for isDiscountSale and Calculations for Update ---
+        # Get current values or fallback to existing
+        base_price = update_payload.get("basePrice", product.basePrice)
+        is_discount_sale = update_payload.get("isDiscountSale", product.isDiscountSale)
+        sale_price = update_payload.get("salePrice", product.salePrice)
+
+        if not is_discount_sale:
+            update_payload["isDiscountSale"] = False
+            update_payload["salePrice"] = base_price
+            update_payload["discountPercentage"] = 0.0
+        else:
+            if sale_price is None or sale_price == 0:
+                # If it was already on sale, we might have sale_price in 'product'
+                sale_price = product.salePrice if product.isDiscountSale else None
+                
+            if sale_price is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Sale price must be provided or exist when product is on discount sale"
+                )
+            if sale_price >= base_price:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST, 
+                    detail="Sale price must be less than base price when product is on discount sale"
+                )
+            
+            update_payload["isDiscountSale"] = True
+            update_payload["salePrice"] = sale_price
+            update_payload["discountPercentage"] = round(((base_price - sale_price) / base_price) * 100, 2)
+
+        # --- Logic for total_payable_amount Update ---
+        current_shipping_charge = update_payload.get("shippingCharge", product.shippingCharge)
+        current_shipping_responsibility = update_payload.get("shippingResponsibility", product.shippingResponsibility)
+        current_sale_price = update_payload.get("salePrice", product.salePrice)
+
+        if current_shipping_responsibility == "CUSTOMER":
+            update_payload["total_payable_amount"] = current_sale_price + current_shipping_charge
+        else:
+            update_payload["total_payable_amount"] = current_sale_price
+
         if image_files:
             new_image_urls = []
             for file in image_files:
@@ -127,17 +207,13 @@ class ProductService:
                     }
                 })
             
+        # Note: 'contains' doesn't work directly on arrays in Prisma exactly the same way as String.
+        # If filtering by size/color as a subset, we use 'has' for single value check.
         if size:
-            where["size"] = {
-                "contains": size,
-                "mode": "insensitive"
-            }
+            where["size"] = {"has": size}
             
         if color:
-            where["colors"] = {
-                "contains": color,
-                "mode": "insensitive"
-            }
+            where["colors"] = {"has": color}
             
         return await prisma.product.find_many(
             where=where,
@@ -160,8 +236,6 @@ class ProductService:
                 "OR": [
                     {"name": {"contains": query, "mode": "insensitive"}},
                     {"description": {"contains": query, "mode": "insensitive"}},
-                    {"size": {"contains": query, "mode": "insensitive"}},
-                    {"colors": {"contains": query, "mode": "insensitive"}},
                     {"store": {"is": {"name": {"contains": query, "mode": "insensitive"}}}},
                     {"categories": {"some": {"name": {"contains": query, "mode": "insensitive"}}}}
                 ]

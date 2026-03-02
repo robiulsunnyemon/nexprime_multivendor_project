@@ -91,11 +91,9 @@ class CartService:
 
             if not product:
                 continue  # product deleted or invalid
-
-            if product.isOnSale and product.salePrice is not None:
-                price = Decimal(str(product.salePrice))
-            else:
-                price = Decimal(str(product.basePrice or 0))
+            
+            # Using total_payable_amount from the product model
+            price = Decimal(str(product.total_payable_amount or 0))
 
             total_amount += price * item.quantity
             total_items += item.quantity

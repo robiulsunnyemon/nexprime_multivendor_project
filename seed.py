@@ -1,7 +1,11 @@
 import asyncio
 import bcrypt
 import random
+import os
+from dotenv import load_dotenv
 from prisma import Prisma
+
+load_dotenv()
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -148,8 +152,8 @@ async def main():
 
     # 5. Create 20 Products
     print("Creating 20 Products...")
-    sizes = ["S", "M", "L", "XL", "2XL"]
-    colors = ["Red", "Blue", "Green", "Black", "White"]
+    sizes = ["S", "M", "L", "XL", "XXL", "FREE_SIZE"]
+    colors_pool = ["Red", "Blue", "Green", "Black", "White", "Yellow"]
     
     for i in range(1, 21):
         store = random.choice(vendors)
@@ -171,19 +175,41 @@ async def main():
             if extra.id not in [s.id for s in subs_to_link]:
                 subs_to_link.append(extra)
 
-        price = round(random.uniform(10.0, 500.0), 2)
+        base_price = round(random.uniform(10.0, 500.0), 2)
+        is_discount_sale = (i % 2 == 0)
         
+        if is_discount_sale:
+            sale_price = round(base_price * 0.8, 2) # 20% discount
+            discount_percentage = round(((base_price - sale_price) / base_price) * 100, 2)
+        else:
+            sale_price = base_price
+            discount_percentage = 0.0
+
+        shipping_charge = random.randint(0, 50)
+        shipping_responsibility = random.choice(["CUSTOMER", "VENDOR"])
+        
+        if shipping_responsibility == "CUSTOMER":
+            total_payable_amount = sale_price + shipping_charge
+        else:
+            total_payable_amount = sale_price
+
+        # Pick random sizes and colors as list
+        prod_sizes = random.sample(sizes, k=random.randint(1, 3))
+        prod_colors = random.sample(colors_pool, k=random.randint(1, 3))
+
         await prisma.product.create(data={
             "name": f"Product Item {i}",
             "description": f"This is an amazing description for product item {i}. Very high quality.",
-            "basePrice": price,
+            "basePrice": base_price,
             "stockUnits": random.randint(10, 100),
-            "size": random.choice(sizes),
-            "colors": random.choice(colors),
-            "isOnSale": random.choice([True, False]),
-            "salePrice": price * 0.8,
-            "discountPercentage": 20.0,
-            "shippingCharge": random.randint(0, 50),
+            "size": prod_sizes,
+            "colors": prod_colors,
+            "isDiscountSale": is_discount_sale,
+            "salePrice": sale_price,
+            "discountPercentage": discount_percentage,
+            "shippingResponsibility": shipping_responsibility,
+            "shippingCharge": shipping_charge,
+            "total_payable_amount": total_payable_amount,
             "images": [f"https://picsum.photos/seed/prod{i}/500", f"https://picsum.photos/seed/prod{i}alt/500"],
             "storeId": store.id,
             "categories": {
@@ -217,6 +243,14 @@ async def main():
         print(f"Created Banner {i}")
 
     print("--- Seeding Completed Successfully ---")
+    product_count = await prisma.product.count()
+    print(f"Total products in database: {product_count}")
+    
+    # Verification fetch
+    test_prod = await prisma.product.find_first()
+    if test_prod:
+        print(f"Verification fetch success: {test_prod.name}, Sizes: {test_prod.size}, Colors: {test_prod.colors}")
+    
     await prisma.disconnect()
 
 if __name__ == "__main__":

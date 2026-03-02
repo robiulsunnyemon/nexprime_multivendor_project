@@ -7,21 +7,45 @@ class ShippingResponsibility(str, Enum):
     CUSTOMER = "CUSTOMER"
     VENDOR = "VENDOR"
 
+class ProductSize(str, Enum):
+    XS = "XS"
+    S = "S"
+    M = "M"
+    L = "L"
+    XL = "XL"
+    XXL = "XXL"
+    XXXL = "XXXL"
+    FREE_SIZE = "FREE_SIZE"
+
 class ProductBase(BaseModel):
     name: str
     description: Optional[str] = None
     basePrice: float
     stockUnits: int = 0
-    size: Optional[str] = None
-    colors: Optional[str] = None
-    isOnSale: bool = False
+    size: List[ProductSize] = []
+    colors: List[str] = []
+    isDiscountSale: bool = False
     salePrice: Optional[float] = None
     discountPercentage: Optional[float] = None
     shippingResponsibility: ShippingResponsibility = ShippingResponsibility.CUSTOMER
     shippingCharge: float = 0
+    total_payable_amount: float = 0
 
 class ProductCreate(ProductBase):
     categoryIds: List[int]
+
+class ProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    basePrice: Optional[float] = None
+    stockUnits: Optional[int] = None
+    size: Optional[List[ProductSize]] = None
+    colors: Optional[List[str]] = None
+    isDiscountSale: Optional[bool] = None
+    salePrice: Optional[float] = None
+    shippingResponsibility: Optional[ShippingResponsibility] = None
+    shippingCharge: Optional[float] = None
+    categoryIds: Optional[List[int]] = None
 
 class SubCategorySimple(BaseModel):
     id: int

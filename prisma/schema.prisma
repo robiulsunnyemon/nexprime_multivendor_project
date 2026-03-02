@@ -148,19 +148,31 @@ enum ShippingResponsibility {
   VENDOR
 }
 
+enum ProductSize {
+  XS
+  S
+  M
+  L
+  XL
+  XXL
+  XXXL
+  FREE_SIZE
+}
+
 model Product {
   id                     Int                    @id @default(autoincrement())
   name                   String
   description            String?
   basePrice              Float
   stockUnits             Int                    @default(0)
-  size                   String?
-  colors                 String?
-  isOnSale               Boolean                @default(false)
+  size                   ProductSize[]
+  colors                 String[]
+  isDiscountSale         Boolean                @default(false)
   salePrice              Float?
   discountPercentage     Float?
   shippingResponsibility ShippingResponsibility @default(CUSTOMER)
   shippingCharge         Float                  @default(0)
+  total_payable_amount   Float                  @default(0)
   images                 String[] // List of image URLs
   
   storeId                Int
