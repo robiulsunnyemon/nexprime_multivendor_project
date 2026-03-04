@@ -18,11 +18,19 @@ async def main():
 
     # 1. Cleanup ALL existing data for a fresh start
     print("Cleaning up all existing data...")
+    # Delete in order of dependencies
+    await prisma.rating.delete_many()
+    await prisma.orderitem.delete_many()
+    await prisma.suborder.delete_many()
+    await prisma.order.delete_many()
+    await prisma.deliveryaddress.delete_many()
+    await prisma.cartitem.delete_many()
+    await prisma.searchhistory.delete_many()
     await prisma.refreshtoken.delete_many()
     await prisma.otp.delete_many()
     await prisma.marketingproduct.delete_many()
-    await prisma.product.delete_many()
     await prisma.kycfile.delete_many()
+    await prisma.product.delete_many()
     await prisma.store.delete_many()
     await prisma.subcategory.delete_many()
     await prisma.user.delete_many()
@@ -34,8 +42,6 @@ async def main():
 
     # 2. Map Main Categories
     print("Mapping Main Categories...")
-    
-    # categories from seed_categories.py + original ones
     required_main_cats = [
         "Grocery",
         "Wardrobe",
@@ -83,175 +89,177 @@ async def main():
     
     # Create Admin
     admin_email = "admin@nexprime.com"
-    existing_admin = await prisma.user.find_unique(where={"email": admin_email})
-    if not existing_admin:
-        await prisma.user.create(data={
-            "fullname": "Head Admin",
-            "email": admin_email,
-            "phonenumber": "01700000000",
-            "password": hash_password("admin123"),
-            "role": "ADMIN",
-            "status": "ACTIVE",
-            "is_verified": True,
-            "residentcard_frontside": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-            "residentcard_backside": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-        })
-        print(f"Created Admin: {admin_email}")
-    else:
-        print(f"Admin already exists: {admin_email}")
+    await prisma.user.create(data={
+        "fullname": "Head Admin",
+        "email": admin_email,
+        "phonenumber": "01700000000",
+        "password": hash_password("admin123"),
+        "role": "ADMIN",
+        "status": "ACTIVE",
+        "is_verified": True,
+        "residentcard_frontside": "https://picsum.photos/seed/adminfront/400",
+        "residentcard_backside": "https://picsum.photos/seed/adminback/400",
+    })
+    print(f"Created Admin: {admin_email}")
 
-    vendors = []
+    vendor_stores = []
     for i in range(1, 11):
         email = f"vendor{i}@nexprime.com"
-        existing = await prisma.user.find_unique(where={"email": email})
-        if not existing:
-            user = await prisma.user.create(data={
-                "fullname": f"Vendor {i}",
-                "email": email,
-                "phonenumber": f"018000000{i:02d}",
-                "password": hash_password("password123"),
-                "role": "VENDOR",
-                "status": "ACTIVE",
-                "is_verified": True,
-                "residentcard_frontside": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-                "residentcard_backside": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-            })
-            print(f"Created Vendor: {email}")
-        else:
-            user = existing
+        user = await prisma.user.create(data={
+            "fullname": f"Vendor {i}",
+            "email": email,
+            "phonenumber": f"018000000{i:02d}",
+            "password": hash_password("password123"),
+            "role": "VENDOR",
+            "status": "ACTIVE",
+            "is_verified": True,
+            "residentcard_frontside": "https://picsum.photos/seed/vfront{i}/400",
+            "residentcard_backside": "https://picsum.photos/seed/vback{i}/400",
+        })
         
-        # Create Store for each vendor
-        store = await prisma.store.find_unique(where={"vendorId": user.id})
-        if not store:
-            store = await prisma.store.create(data={
-                "name": f"Shop {i} Emporium",
-                "bio": f"Quality products from Shop {i}",
-                "address": f"Address {i}, Marketplace",
-                "photo": f"https://picsum.photos/seed/shop{i}/400",
-                "vendorId": user.id
-            })
-            print(f"Created Store for Vendor {i}")
-        vendors.append(store)
+        store = await prisma.store.create(data={
+            "name": f"Shop {i} Emporium",
+            "bio": f"Quality products from Shop {i}",
+            "address": f"Address {i}, Marketplace",
+            "photo": f"https://picsum.photos/seed/shop{i}/400",
+            "vendorId": user.id
+        })
+        vendor_stores.append(store)
+        print(f"Created Vendor & Store: {email}")
 
+    customers = []
     for i in range(1, 11):
         email = f"customer{i}@nexprime.com"
-        existing = await prisma.user.find_unique(where={"email": email})
-        if not existing:
-            await prisma.user.create(data={
-                "fullname": f"Customer {i}",
-                "email": email,
-                "phonenumber": f"019000000{i:02d}",
-                "password": hash_password("password123"),
-                "role": "CUSTOMER",
-                "status": "ACTIVE",
-                "is_verified": True,
-                "residentcard_frontside": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-                "residentcard_backside": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-            })
-            print(f"Created Customer: {email}")
+        user = await prisma.user.create(data={
+            "fullname": f"Customer {i}",
+            "email": email,
+            "phonenumber": f"019000000{i:02d}",
+            "password": hash_password("password123"),
+            "role": "CUSTOMER",
+            "status": "ACTIVE",
+            "is_verified": True,
+            "residentcard_frontside": "https://picsum.photos/seed/cfront{i}/400",
+            "residentcard_backside": "https://picsum.photos/seed/cback{i}/400",
+        })
+        customers.append(user)
+        
+        # 4a. Create Delivery Address for each customer
+        addr = await prisma.deliveryaddress.create(data={
+            "fullName": user.fullname,
+            "phoneNumber": user.phonenumber,
+            "postcode": f"100{i}",
+            "fullAddress": f"House {i*10}, Road {i}, Dhaka, Bangladesh",
+            "buildingNameRoomNumber": f"Building {i}, Flat {i}A",
+            "userId": user.id
+        })
+        print(f"Created Customer & Address: {email}")
 
-    # 5. Create 20 Products
-    print("Creating 20 Products...")
+    # 5. Create 30 Products
+    print("Creating 30 Products...")
     sizes = ["S", "M", "L", "XL", "XXL", "FREE_SIZE"]
     colors_pool = ["Red", "Blue", "Green", "Black", "White", "Yellow"]
     
-    for i in range(1, 21):
-        store = random.choice(vendors)
-        
-        # Decide if this is a Grocery or Wardrobe product
+    all_products = []
+    for i in range(1, 31):
+        store = random.choice(vendor_stores)
         group = random.choice(["grocery", "wardrobe"])
-        
         main_subs = created_sub_cats_map[group]
         country_subs = created_sub_cats_map[f"{group} country"]
         
-        # Pick at least one from main and one from country (Intersection requirement)
-        sub1 = random.choice(main_subs)
-        sub2 = random.choice(country_subs)
-        subs_to_link = [sub1, sub2]
+        subs_to_link = [random.choice(main_subs), random.choice(country_subs)]
         
-        # Possibly add some more random ones from the same group
-        if random.random() > 0.7:
-            extra = random.choice(main_subs + country_subs)
-            if extra.id not in [s.id for s in subs_to_link]:
-                subs_to_link.append(extra)
-
         base_price = round(random.uniform(10.0, 500.0), 2)
-        is_discount_sale = (i % 2 == 0)
-        
-        if is_discount_sale:
-            sale_price = round(base_price * 0.8, 2) # 20% discount
-            discount_percentage = round(((base_price - sale_price) / base_price) * 100, 2)
-        else:
-            sale_price = base_price
-            discount_percentage = 0.0
+        is_discount_sale = (i % 3 == 0)
+        sale_price = round(base_price * 0.8, 2) if is_discount_sale else base_price
+        discount_percentage = 20.0 if is_discount_sale else 0.0
 
-        shipping_charge = random.randint(0, 50)
-        shipping_responsibility = random.choice(["CUSTOMER", "VENDOR"])
-        
-        if shipping_responsibility == "CUSTOMER":
-            total_payable_amount = sale_price + shipping_charge
-        else:
-            total_payable_amount = sale_price
-
-        # Pick random sizes and colors as list
-        prod_sizes = random.sample(sizes, k=random.randint(1, 3))
-        prod_colors = random.sample(colors_pool, k=random.randint(1, 3))
-
-        await prisma.product.create(data={
+        prod = await prisma.product.create(data={
             "name": f"Product Item {i}",
-            "description": f"This is an amazing description for product item {i}. Very high quality.",
+            "description": f"Quality {group} item from {store.name}.",
             "basePrice": base_price,
-            "stockUnits": random.randint(10, 100),
-            "size": prod_sizes,
-            "colors": prod_colors,
+            "stockUnits": random.randint(50, 200),
+            "size": random.sample(sizes, k=random.randint(1, 3)),
+            "colors": random.sample(colors_pool, k=random.randint(1, 3)),
             "isDiscountSale": is_discount_sale,
             "salePrice": sale_price,
             "discountPercentage": discount_percentage,
-            "shippingResponsibility": shipping_responsibility,
-            "shippingCharge": shipping_charge,
-            "total_payable_amount": total_payable_amount,
-            "images": [f"https://picsum.photos/seed/prod{i}/500", f"https://picsum.photos/seed/prod{i}alt/500"],
+            "shippingResponsibility": random.choice(["CUSTOMER", "VENDOR"]),
+            "shippingCharge": random.randint(0, 50),
+            "total_payable_amount": sale_price + 20, # dummy total
+            "images": [f"https://picsum.photos/seed/prod{i}/500"],
             "storeId": store.id,
-            "categories": {
-                "connect": [{"id": sc.id} for sc in subs_to_link]
-            }
+            "categories": {"connect": [{"id": sc.id} for sc in subs_to_link]}
         })
-        print(f"Created Product {i} ({group}) in Store {store.id} with categories: {[s.name for s in subs_to_link]}")
+        all_products.append(prod)
+        print(f"Created Product {i}")
 
-    # 6. Create KYC Files for Vendors
-    print("Creating KYC Files for Vendors...")
+    # 6. Create Example Orders
+    print("Creating Example Orders...")
+    for i in range(1, 6):
+        customer = random.choice(customers)
+        addr = await prisma.deliveryaddress.find_first(where={"userId": customer.id})
+        
+        # Pick 3 random products from different stores
+        order_prods = random.sample(all_products, 3)
+        total_amount = sum(p.salePrice for p in order_prods)
+        
+        # Create Main Order
+        order = await prisma.order.create(data={
+            "userId": customer.id,
+            "deliveryAddressId": addr.id,
+            "totalAmount": total_amount,
+            "isPaid": i % 2 == 0,
+            "status": "PENDING"
+        })
+        
+        # Group by store for SubOrders
+        store_groups = {}
+        for p in order_prods:
+            if p.storeId not in store_groups:
+                store_groups[p.storeId] = []
+            store_groups[p.storeId].append(p)
+            
+        for store_id, prods in store_groups.items():
+            sub_total = sum(p.salePrice for p in prods)
+            sub_order = await prisma.suborder.create(data={
+                "orderId": order.id,
+                "storeId": store_id,
+                "subTotal": sub_total,
+                "isFulfield": False,
+                "isComplete": False
+            })
+            
+            for p in prods:
+                await prisma.orderitem.create(data={
+                    "subOrderId": sub_order.id,
+                    "productId": p.id,
+                    "quantity": 1,
+                    "price": p.salePrice
+                })
+        print(f"Created Order {i} for {customer.email}")
+
+    # 7. Create KYC Files & Banners
+    print("Finalizing Seeding...")
     vendors_users = await prisma.user.find_many(where={"role": "VENDOR"})
     for v_user in vendors_users:
-        existing_kyc = await prisma.kycfile.find_first(where={"vendorId": v_user.id})
-        if not existing_kyc:
-            await prisma.kycfile.create(data={
-                "title": f"KYC for {v_user.fullname}",
-                "fileUrl": "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg",
-                "status": "ACTIVE",
-                "vendorId": v_user.id
-            })
-            print(f"Created KYC for Vendor: {v_user.email}")
-
-    # 7. Create Banners
-    print("Creating Banners...")
-    await prisma.banner.delete_many() # Refresh banners
+        await prisma.kycfile.create(data={
+            "title": f"KYC for {v_user.fullname}",
+            "fileUrl": "https://picsum.photos/seed/kyc/400",
+            "status": "ACTIVE",
+            "vendorId": v_user.id
+        })
+    
     for i in range(1, 4):
         await prisma.banner.create(data={
             "imageUrl": f"https://picsum.photos/seed/banner{i}/1200/400",
-            "link": f"https://example.com/promo{i}"
+            "link": "https://nexprime.com"
         })
-        print(f"Created Banner {i}")
 
     print("--- Seeding Completed Successfully ---")
-    product_count = await prisma.product.count()
-    print(f"Total products in database: {product_count}")
-    
-    # Verification fetch
-    test_prod = await prisma.product.find_first()
-    if test_prod:
-        print(f"Verification fetch success: {test_prod.name}, Sizes: {test_prod.size}, Colors: {test_prod.colors}")
-    
     await prisma.disconnect()
+
+if __name__ == "__main__":
+    asyncio.run(main())
 
 if __name__ == "__main__":
     asyncio.run(main())

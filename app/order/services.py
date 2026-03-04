@@ -237,7 +237,8 @@ class OrderService:
 
         updated_suborder = await prisma.suborder.update(
             where={"id": suborder_id},
-            data={"isFulfield": is_fulfield}
+            data={"isFulfield": is_fulfield},
+            include={"orderItems": True}
         )
         
         # Trigger status derivation
@@ -256,7 +257,8 @@ class OrderService:
 
         updated_suborder = await prisma.suborder.update(
             where={"id": suborder_id},
-            data={"isComplete": is_complete}
+            data={"isComplete": is_complete},
+            include={"orderItems": True}
         )
         
         # Trigger status derivation
@@ -275,7 +277,8 @@ class OrderService:
 
         return await prisma.suborder.update(
             where={"id": suborder_id},
-            data={"isArchive": is_archive}
+            data={"isArchive": is_archive},
+            include={"orderItems": True}
         )
 
     @staticmethod
