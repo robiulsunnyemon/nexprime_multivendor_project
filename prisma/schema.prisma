@@ -51,6 +51,9 @@ model User {
   refreshTokens          RefreshToken[]
   searchHistories        SearchHistory[]
   cartItems              CartItem[]
+  deliveryAddresses      DeliveryAddress[]
+  orders                 Order[]
+  ratings                Rating[]
 }
 
 
@@ -174,16 +177,76 @@ model Product {
   shippingCharge         Float                  @default(0)
   total_payable_amount   Float                  @default(0)
   images                 String[] // List of image URLs
+  averageRating          Float                  @default(0)
+  totalRatings           Int                    @default(0)
   
   storeId                Int
   store                  Store                  @relation(fields: [storeId], references: [id], onDelete: Cascade)
   
   categories             SubCategory[]          @relation("ProductCategories")
+  orderItems             OrderItem[]
+  ratings                Rating[]
   
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
 
   cartItems              CartItem[]
+}
+
+model DeliveryAddress {
+  id                    Int      @id @default(autoincrement())
+  fullName              String
+  postcode              String
+  fullAddress           String
+  buildingNameRoomNumber String?
+  phoneNumber           String
+  userId                Int
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders                Order[]
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Order {
+  id                Int             @id @default(autoincrement())
+  totalAmount       Float
+  isPaid            Boolean         @default(false)
+  isFulfield        Boolean         @default(false)
+  isArchive         Boolean         @default(false)
+  deliveryAddressId Int
+  deliveryAddress   DeliveryAddress @relation(fields: [deliveryAddressId], references: [id], onDelete: Cascade)
+  userId            Int
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderItems        OrderItem[]
+  ratings           Rating[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model OrderItem {
+  id         Int     @id @default(autoincrement())
+  orderId    Int
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  Int
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity   Int
+  price      Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Rating {
+  id         Int      @id @default(autoincrement())
+  score      Int
+  review     String?  @db.Text
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId    Int
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model SubCategory {
