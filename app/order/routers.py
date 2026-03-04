@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from typing import List, Optional
-from app.core.current_user import get_customer, get_admin
+from app.core.current_user import get_customer, get_admin,get_vendor
 from app.order.services import OrderService
 from app.order.schemas import (
     DeliveryAddressCreate, DeliveryAddressResponse,
-    OrderCreate, OrderResponse, RatingCreate
+    OrderCreate, OrderResponse, RatingCreate,SubOrderResponse
 )
 
 router = APIRouter(prefix="/orders", tags=["Order & Rating Management"])
@@ -55,12 +55,49 @@ async def update_payment_status(
     is_paid: bool,
     current_admin = Depends(get_admin)
 ):
-    return await OrderService.update_payment_status(order_id=order_id, is_paid=is_paid)
+    return await OrderService.update_payment_status(
+        order_id=order_id, 
+        is_paid=is_paid
+    )
 
-@router.patch("/{order_id}/fulfill", response_model=OrderResponse)
-async def update_fulfillment_status(
-    order_id: int,
+# --- Vendor Endpoints ---
+
+@router.patch("/sub-order/{suborder_id}/fulfill", response_model=SubOrderResponse)
+async def update_suborder_fulfillment(
+    suborder_id: int,
     is_fulfield: bool,
-    current_admin = Depends(get_admin)
+    current_vendor = Depends(get_vendor)
 ):
-    return await OrderService.update_fulfillment_status(order_id=order_id, is_fulfield=is_fulfield)
+    return await OrderService.update_suborder_fulfillment(
+        suborder_id=suborder_id, 
+        is_fulfield=is_fulfield, 
+        vendor_id=current_vendor.id
+    )
+
+@router.patch("/sub-order/{suborder_id}/complete", response_model=SubOrderResponse)
+async def update_suborder_completion(
+    suborder_id: int,
+    is_complete: bool,
+    current_vendor = Depends(get_vendor)
+):
+    return await OrderService.update_suborder_completion(
+        suborder_id=suborder_id, 
+        is_complete=is_complete, 
+        vendor_id=current_vendor.id
+    )
+
+@router.patch("/sub-order/{suborder_id}/archive", response_model=SubOrderResponse)
+async def update_suborder_archive(
+    suborder_id: int,
+    is_archive: bool,
+    current_vendor = Depends(get_vendor)
+):
+    return await OrderService.update_suborder_archive(
+        suborder_id=suborder_id, 
+        is_archive=is_archive, 
+        vendor_id=current_vendor.id
+    )
+
+@router.get("/vendor/me", response_model=List[SubOrderResponse])
+async def get_vendor_suborders(current_vendor = Depends(get_vendor)):
+    return await OrderService.get_vendor_suborders(vendor_id=current_vendor.id)

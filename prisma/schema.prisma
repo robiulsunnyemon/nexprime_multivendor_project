@@ -82,6 +82,7 @@ model Store {
   updatedAt   DateTime @updatedAt
   followers   User[]   @relation("UserFollowedStores")
   products    Product[]
+  subOrders   SubOrder[]
 }
 
 
@@ -207,28 +208,48 @@ model DeliveryAddress {
   updatedAt             DateTime @updatedAt
 }
 
+enum OrderStatus {
+  PENDING
+  SHIPPED
+  DELIVERED
+}
+
 model Order {
   id                Int             @id @default(autoincrement())
   totalAmount       Float
   isPaid            Boolean         @default(false)
-  isFulfield        Boolean         @default(false)
-  isArchive         Boolean         @default(false)
+  status            OrderStatus     @default(PENDING)
   deliveryAddressId Int
   deliveryAddress   DeliveryAddress @relation(fields: [deliveryAddressId], references: [id], onDelete: Cascade)
   userId            Int
   user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderItems        OrderItem[]
+  subOrders         SubOrder[]
   ratings           Rating[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }
 
+model SubOrder {
+  id          Int         @id @default(autoincrement())
+  orderId     Int
+  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  storeId     Int
+  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  subTotal    Float
+  isFulfield  Boolean     @default(false)
+  isComplete  Boolean     @default(false)
+  isArchive   Boolean     @default(false)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
 model OrderItem {
-  id         Int     @id @default(autoincrement())
-  orderId    Int
-  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  id         Int      @id @default(autoincrement())
+  subOrderId Int
+  subOrder   SubOrder @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
   productId  Int
-  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity   Int
   price      Float
   createdAt  DateTime @default(now())
