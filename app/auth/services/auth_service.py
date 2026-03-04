@@ -420,3 +420,11 @@ async def refresh_token_service(refresh_token: str) -> dict:
         "refresh_token": new_refresh_token,
         "token_type": "bearer"
     }
+
+async def get_user_by_token(token: str):
+    try:
+        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
+        user_id = int(payload.get("sub"))
+        return await prisma.user.find_unique(where={"id": user_id})
+    except Exception:
+        return None

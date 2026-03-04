@@ -22,6 +22,13 @@ enum AccountStatus {
   INACTIVE
 }
 
+enum MessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
 model User {
   id                     Int           @id @default(autoincrement())
   fullname               String
@@ -41,7 +48,7 @@ model User {
 
   createdAt              DateTime      @default(now())
   updatedAt              DateTime      @updatedAt
-
+  lastActiveAt           DateTime      @default(now())
 
   followedStores         Store[]       @relation("UserFollowedStores")
   otps                   OTP[]
@@ -54,6 +61,8 @@ model User {
   deliveryAddresses      DeliveryAddress[]
   orders                 Order[]
   ratings                Rating[]
+  sentMessages           Message[]     @relation("SentMessages")
+  receivedMessages       Message[]     @relation("ReceivedMessages")
 }
 
 
@@ -357,3 +366,26 @@ model FAQ {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
+
+model Message {
+  id        Int         @id @default(autoincrement())
+  content   String
+  type      MessageType @default(TEXT)
+  
+  senderId  Int
+  sender    User        @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  
+  receiverId Int
+  receiver   User       @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+  
+  replyToId Int?
+  replyTo   Message?    @relation("ReplyRelation", fields: [replyToId], references: [id])
+  replies   Message[]   @relation("ReplyRelation")
+  
+  isRead    Boolean     @default(false)
+  createdAt DateTime    @default(now())
+
+  @@index([senderId])
+  @@index([receiverId])
+}
+

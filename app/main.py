@@ -17,6 +17,7 @@ from app.faq.routers import router as faq_router
 from app.marketing_product.routers import router as marketing_product_router
 from app.admin.routers.admin_marketing_setting_router import router as admin_marketing_setting_router
 from app.order.routers import router as order_router
+from app.chat.routers import router as chat_router
 
 
 @asynccontextmanager
@@ -61,3 +62,4 @@ app.include_router(faq_router)
 app.include_router(marketing_product_router)
 app.include_router(admin_marketing_setting_router)
 app.include_router(order_router)
+app.include_router(chat_router)
