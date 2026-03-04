@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, Request
 from typing import List, Optional
 from app.core.current_user import get_customer, get_admin,get_vendor
-from app.order.services import OrderService
+from app.order.services import OrderService, SettingService, PaymentService
 from app.order.schemas import (
     DeliveryAddressCreate, DeliveryAddressResponse,
-    OrderCreate, OrderResponse, RatingCreate,SubOrderResponse
+    OrderCreate, OrderResponse, RatingCreate,SubOrderResponse,
+    PlatformCommissionResponse, PlatformCommissionUpdate
 )
 
 router = APIRouter(prefix="/orders", tags=["Order & Rating Management"])
@@ -60,6 +61,17 @@ async def update_payment_status(
         is_paid=is_paid
     )
 
+@router.get("/settings/commission", response_model=PlatformCommissionResponse)
+async def get_commission_setting(current_admin = Depends(get_admin)):
+    return await SettingService.get_commission_setting()
+
+@router.patch("/settings/commission", response_model=PlatformCommissionResponse)
+async def update_commission_setting(
+    data: PlatformCommissionUpdate,
+    current_admin = Depends(get_admin)
+):
+    return await SettingService.update_commission_setting(percentage=data.commissionPercentage)
+
 # --- Vendor Endpoints ---
 
 @router.patch("/sub-order/{suborder_id}/fulfill", response_model=SubOrderResponse)
@@ -101,3 +113,18 @@ async def update_suborder_archive(
 @router.get("/vendor/me", response_model=List[SubOrderResponse])
 async def get_vendor_suborders(current_vendor = Depends(get_vendor)):
     return await OrderService.get_vendor_suborders(vendor_id=current_vendor.id)
+
+# --- Payment Endpoints ---
+
+@router.post("/{order_id}/create-payment-intent")
+async def create_payment_intent(
+    order_id: int,
+    current_customer = Depends(get_customer)
+):
+    return await PaymentService.create_payment_intent(order_id=order_id, user_id=current_customer.id)
+
+@router.post("/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig_header = request.headers.get("stripe-signature")
+    return await PaymentService.handle_webhook(payload, sig_header)

@@ -124,6 +124,12 @@ model SystemSetting {
 }
 
 
+model PlatformCommissionSetting {
+  id                   Int     @id @default(1)
+  commissionPercentage Float   @default(10.0)
+  updatedAt            DateTime @updatedAt
+}
+
 model MarketingProductSetting {
   id                  Int     @id @default(1)
   isPublishingEnabled Boolean @default(true)
@@ -230,18 +236,20 @@ model Order {
 }
 
 model SubOrder {
-  id          Int         @id @default(autoincrement())
-  orderId     Int
-  order       Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  storeId     Int
-  store       Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  subTotal    Float
-  isFulfield  Boolean     @default(false)
-  isComplete  Boolean     @default(false)
-  isArchive   Boolean     @default(false)
-  orderItems  OrderItem[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id               Int         @id @default(autoincrement())
+  orderId          Int
+  order            Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  storeId          Int
+  store            Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  subTotal         Float
+  commissionAmount Float       @default(0.0)
+  vendorEarnings   Float       @default(0.0)
+  isFulfield       Boolean     @default(false)
+  isComplete       Boolean     @default(false)
+  isArchive        Boolean     @default(false)
+  orderItems       OrderItem[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
 }
 
 model OrderItem {

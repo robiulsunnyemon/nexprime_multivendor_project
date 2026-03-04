@@ -52,6 +52,8 @@ class SubOrderResponse(BaseModel):
     orderId: int
     storeId: int
     subTotal: float
+    commissionAmount: float
+    vendorEarnings: float
     isFulfield: bool
     isComplete: bool
     isArchive: bool
@@ -61,6 +63,19 @@ class SubOrderResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+# --- Setting Schemas ---
+
+class PlatformCommissionResponse(BaseModel):
+    id: int
+    commissionPercentage: float
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
+class PlatformCommissionUpdate(BaseModel):
+    commissionPercentage: float
 
 # --- Order Schemas ---
 

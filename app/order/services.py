@@ -4,6 +4,11 @@ from fastapi import HTTPException
 from app.order.schemas import DeliveryAddressCreate, OrderCreate, RatingCreate
 from app.cart.services import CartService
 from decimal import Decimal
+import stripe
+import os
+
+# Stripe secret key should be in .env
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 class OrderService:
     @staticmethod
@@ -295,3 +300,94 @@ class OrderService:
             },
             order={"createdAt": "desc"}
         )
+
+class SettingService:
+    @staticmethod
+    async def get_commission_setting():
+        setting = await prisma.platformcommissionsetting.find_first(where={"id": 1})
+        if not setting:
+            # Seed default if not exists
+            setting = await prisma.platformcommissionsetting.create(
+                data={"id": 1, "commissionPercentage": 10.0}
+            )
+        return setting
+
+    @staticmethod
+    async def update_commission_setting(percentage: float):
+        return await prisma.platformcommissionsetting.update(
+            where={"id": 1},
+            data={"commissionPercentage": percentage}
+        )
+
+class PaymentService:
+    @staticmethod
+    async def create_payment_intent(order_id: int, user_id: int):
+        order = await prisma.order.find_unique(where={"id": order_id})
+        if not order or order.userId != user_id:
+            raise HTTPException(status_code=404, detail="Order not found")
+        
+        # Stripe expects amount in cents
+        amount = int(order.totalAmount * 100)
+        
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=amount,
+                currency="usd", 
+                metadata={"order_id": order.id}
+            )
+            return {"clientSecret": intent.client_secret}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @staticmethod
+    async def handle_webhook(payload: bytes, sig_header: str):
+        endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET") or ""
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        except Exception as e:
+            # Fallback for testing without a real secret during development if needed
+            if not endpoint_secret:
+                # DANGEROUS: Only for dev if secrets aren't set yet
+                import json
+                event_data = json.loads(payload)
+                if event_data['type'] == 'payment_intent.succeeded':
+                    intent = event_data['data']['object']
+                    order_id = int(intent['metadata']['order_id'])
+                    await PaymentService.process_successful_payment(order_id)
+                return {"status": "success (mocked)"}
+            raise HTTPException(status_code=400, detail="Invalid webhook payload")
+
+        if event['type'] == 'payment_intent.succeeded':
+            intent = event['data']['object']
+            order_id = int(intent['metadata']['order_id'])
+            await PaymentService.process_successful_payment(order_id)
+        
+        return {"status": "success"}
+
+    @staticmethod
+    async def process_successful_payment(order_id: int):
+        # Using a transaction to ensure atomic split
+        async with prisma.tx() as tx:
+            # 1. Update Order status
+            await tx.order.update(
+                where={"id": order_id},
+                data={"isPaid": True}
+            )
+
+            # 2. Get commission setting
+            setting = await tx.platformcommissionsetting.find_first(where={"id": 1})
+            commission_pct = setting.commissionPercentage if setting else 10.0
+
+            # 3. Calculate and update SubOrders
+            sub_orders = await tx.suborder.find_many(where={"orderId": order_id})
+            for so in sub_orders:
+                commission = so.subTotal * (commission_pct / 100)
+                earnings = so.subTotal - commission
+                
+                await tx.suborder.update(
+                    where={"id": so.id},
+                    data={
+                        "commissionAmount": float(Decimal(str(commission)).quantize(Decimal("0.01"))),
+                        "vendorEarnings": float(Decimal(str(earnings)).quantize(Decimal("0.01")))
+                    }
+                )

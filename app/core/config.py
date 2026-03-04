@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str
     CLOUDINARY_API_SECRET: str
 
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+
     class Config:
         env_file = ".env"
 
