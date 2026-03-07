@@ -13,6 +13,15 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 class OrderService:
     @staticmethod
     async def create_delivery_address(user_id: int, data: DeliveryAddressCreate):
+        existing_address = await prisma.deliveryaddress.find_first(
+            where={"userId": user_id}
+        )
+        if existing_address:
+            return await prisma.deliveryaddress.update(
+                where={"id": existing_address.id},
+                data={**data.model_dump()}
+            )
+        
         return await prisma.deliveryaddress.create(
             data={
                 **data.model_dump(),
@@ -21,8 +30,8 @@ class OrderService:
         )
 
     @staticmethod
-    async def get_delivery_addresses(user_id: int):
-        return await prisma.deliveryaddress.find_many(
+    async def get_delivery_address(user_id: int):
+        return await prisma.deliveryaddress.find_first(
             where={"userId": user_id}
         )
 

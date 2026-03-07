@@ -12,16 +12,19 @@ router = APIRouter(prefix="/orders", tags=["Order & Rating Management"])
 
 # --- Delivery Address Endpoints ---
 
-@router.post("/delivery-address", response_model=DeliveryAddressResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/delivery-address", response_model=DeliveryAddressResponse)
 async def create_delivery_address(
     data: DeliveryAddressCreate,
     current_customer = Depends(get_customer)
 ):
     return await OrderService.create_delivery_address(user_id=current_customer.id, data=data)
 
-@router.get("/delivery-address", response_model=List[DeliveryAddressResponse])
-async def get_delivery_addresses(current_customer = Depends(get_customer)):
-    return await OrderService.get_delivery_addresses(user_id=current_customer.id)
+@router.get("/delivery-address", response_model=DeliveryAddressResponse)
+async def get_delivery_address(current_customer = Depends(get_customer)):
+    address = await OrderService.get_delivery_address(user_id=current_customer.id)
+    if not address:
+        raise HTTPException(status_code=404, detail="Delivery address not found")
+    return address
 
 # --- Order Endpoints ---
 
