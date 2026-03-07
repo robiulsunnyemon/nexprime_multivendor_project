@@ -120,3 +120,19 @@ class RatingResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class RatingUserDetail(BaseModel):
+    id: int
+    fullname: str
+    profileImageUrl: Optional[str] = None
+
+class RatingWithUserResponse(BaseModel):
+    id: int
+    score: int
+    review: Optional[str]
+    productId: int
+    orderId: int
+    userId: int
+    user: RatingUserDetail
+    createdAt: datetime
+    updatedAt: datetime

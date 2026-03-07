@@ -146,14 +146,14 @@ class OrderService:
         if not order or order.userId != user_id:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        # Check if all sub orders are fulfilled? 
+        # Check if all sub orders are completed? 
         # Or should we allow rating per SubOrder?
         # Requirement says "Order ID pass kore rating dibe category user, kintu backend-e sei order-er sokol ponnyer upor rating add hoye jabe"
-        # Since the requirement is very specific about "all products of that order", we'll check if all suborders are fulfilled.
+        # Since the requirement is very specific about "all products of that order", we'll check if all suborders are completed.
         
-        all_fulfilled = all(so.isFulfield for so in order.subOrders)
-        if not all_fulfilled:
-            raise HTTPException(status_code=400, detail="Cannot rate until all items in the order are fulfilled")
+        all_complete = all(so.isComplete for so in order.subOrders)
+        if not all_complete:
+            raise HTTPException(status_code=400, detail="Cannot rate until all items in the order are completed")
 
         existing_rating = await prisma.rating.find_first(
             where={"orderId": order_id, "userId": user_id}
@@ -198,6 +198,37 @@ class OrderService:
                     processed_products.add(product.id)
         
         return {"message": "Rating submitted successfully for all products in the order"}
+
+    @staticmethod
+    async def get_product_ratings(product_id: int):
+        ratings = await prisma.rating.find_many(
+            where={"productId": product_id},
+            include={
+                "user": True  # To fetch user details like name & avatar
+            },
+            order={"createdAt": "desc"}
+        )
+        
+        # Format the response appropriately
+        formatted_ratings = []
+        for r in ratings:
+            formatted_ratings.append({
+                "id": r.id,
+                "score": r.score,
+                "review": r.review,
+                "productId": r.productId,
+                "orderId": r.orderId,
+                "userId": r.userId,
+                "user": {
+                    "id": r.user.id if r.user else None,
+                    "fullname": r.user.fullname if r.user else "Unknown User",
+                    "profileImageUrl": getattr(r.user, 'profileImageUrl', None) if r.user else None
+                },
+                "createdAt": r.createdAt,
+                "updatedAt": r.updatedAt
+            })
+            
+        return formatted_ratings
 
     @staticmethod
     async def _update_order_status(order_id: int, tx=None):

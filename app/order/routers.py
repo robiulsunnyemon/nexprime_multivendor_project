@@ -5,7 +5,8 @@ from app.order.services import OrderService, SettingService, PaymentService
 from app.order.schemas import (
     DeliveryAddressCreate, DeliveryAddressResponse,
     OrderCreate, OrderResponse, RatingCreate,SubOrderResponse,
-    PlatformCommissionResponse, PlatformCommissionUpdate
+    PlatformCommissionResponse, PlatformCommissionUpdate,
+    RatingWithUserResponse
 )
 
 router = APIRouter(prefix="/orders", tags=["Order & Rating Management"])
@@ -39,7 +40,7 @@ async def create_order(
 async def get_my_orders(current_customer = Depends(get_customer)):
     return await OrderService.get_user_orders(user_id=current_customer.id)
 
-@router.post("/{order_id}/rate")
+@router.post("/{order_id}/ratings")
 async def rate_order(
     order_id: int,
     rating_data: RatingCreate,
@@ -50,6 +51,10 @@ async def rate_order(
         order_id=order_id, 
         rating_data=rating_data
     )
+
+@router.get("/product/{product_id}/ratings", response_model=List[RatingWithUserResponse])
+async def get_product_ratings(product_id: int):
+    return await OrderService.get_product_ratings(product_id=product_id)
 
 # --- Admin Endpoints ---
 
