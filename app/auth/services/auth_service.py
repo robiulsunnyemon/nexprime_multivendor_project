@@ -430,3 +430,11 @@ async def get_user_by_token(token: str):
         return await prisma.user.find_unique(where={"id": user_id})
     except Exception:
         return None
+
+async def logout_service(refresh_token: str) -> dict:
+    # Check if token exists in DB
+    stored_token = await prisma.refreshtoken.find_unique(where={"token": refresh_token})
+    if stored_token:
+        await prisma.refreshtoken.delete(where={"id": stored_token.id})
+    
+    return {"message": "Successfully logged out. Refresh token revoked."}

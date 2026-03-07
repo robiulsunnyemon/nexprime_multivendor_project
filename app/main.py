@@ -19,6 +19,7 @@ from app.admin.routers.admin_marketing_setting_router import router as admin_mar
 from app.order.routers import router as order_router
 from app.chat.routers import router as chat_router
 from app.live.routers import router as live_stream_router
+from app.admin.routers.admin_dashboard_router import router as admin_dashboard_router
 
 
 @asynccontextmanager
@@ -65,3 +66,4 @@ app.include_router(admin_marketing_setting_router)
 app.include_router(order_router)
 app.include_router(chat_router)
 app.include_router(live_stream_router)
+app.include_router(admin_dashboard_router)

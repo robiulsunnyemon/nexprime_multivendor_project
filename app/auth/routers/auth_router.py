@@ -22,6 +22,7 @@ from app.auth.services.auth_service import (
     signup_service,
     verify_otp_service, vendor_signup_service,
     refresh_token_service,
+    logout_service,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -30,6 +31,11 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 @router.post("/refresh", response_model=TokenResponse, summary="Get a new access token using refresh token")
 async def refresh_token(body: RefreshTokenRequest):
     return await refresh_token_service(refresh_token=body.refresh_token)
+
+
+@router.post("/logout", response_model=MessageResponse, summary="Logout and revoke refresh token")
+async def logout(body: RefreshTokenRequest):
+    return await logout_service(refresh_token=body.refresh_token)
 
 
 # ─────────────────────────────────────────────────────────
