@@ -45,9 +45,11 @@ async def main():
         print(f"-> Total Streams: {len(all_streams)}")
 
         print("\n3. Testing Get Active Streams")
-        active_streams = await LiveStreamService.get_active_streams()
-        print(f"-> Total Active Streams: {len(active_streams)}")
-        assert any(s.id == stream_id for s in active_streams), "Created stream should be active"
+        active_res = await LiveStreamService.get_active_streams()
+        print(f"-> Total Active Streams (from summary): {active_res['totalActiveStreams']}")
+        print(f"-> Total Viewers (from summary): {active_res['totalViewers']}")
+        assert active_res['totalActiveStreams'] >= 1
+        assert any(s.id == stream_id for s in active_res['streams']), "Created stream should be in the active list"
 
         print(f"\n4. Testing Join Stream (Viewer ID: {viewer.id})")
         join_res = await LiveStreamService.join_stream(stream_id, viewer.id)
@@ -62,7 +64,7 @@ async def main():
 
         print("\n6. Verifying that it is no longer active")
         active_after_stop = await LiveStreamService.get_active_streams()
-        assert not any(s.id == stream_id for s in active_after_stop), "Stream should no longer be active"
+        assert not any(s.id == stream_id for s in active_after_stop['streams']), "Stream should no longer be active"
         print("-> Verification Passed!")
 
         print("\nAll Tests Executed Successfully!")

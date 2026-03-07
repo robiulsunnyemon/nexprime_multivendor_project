@@ -25,3 +25,8 @@ class LiveStreamResponse(BaseModel):
 class LiveTokenResponse(BaseModel):
     token: str
     stream: LiveStreamResponse
+
+class ActiveStreamsListResponse(BaseModel):
+    totalActiveStreams: int
+    totalViewers: int
+    streams: list[LiveStreamResponse]

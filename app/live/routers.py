@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from typing import List
 from app.core.current_user import get_current_user
-from app.live.schemas import LiveStreamCreate, LiveStreamResponse, LiveTokenResponse
+from app.live.schemas import LiveStreamCreate, LiveStreamResponse, LiveTokenResponse, ActiveStreamsListResponse
 from app.live.services import LiveStreamService
 
 router = APIRouter(prefix="/live-streams", tags=["Live Streaming"])
@@ -23,7 +23,7 @@ async def get_all_streams():
     """
     return await LiveStreamService.get_all_streams()
 
-@router.get("/active", response_model=List[LiveStreamResponse])
+@router.get("/active", response_model=ActiveStreamsListResponse)
 async def get_active_streams():
     """
     Get all currently active live streams.

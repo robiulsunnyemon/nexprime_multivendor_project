@@ -58,10 +58,17 @@ class LiveStreamService:
 
     @staticmethod
     async def get_active_streams():
-        return await prisma.livestream.find_many(
+        streams = await prisma.livestream.find_many(
             where={"isActive": True},
             order={"createdAt": "desc"}
         )
+        total_viewers = sum(s.viewsCount for s in streams)
+        
+        return {
+            "totalActiveStreams": len(streams),
+            "totalViewers": total_viewers,
+            "streams": streams
+        }
 
     @staticmethod
     async def join_stream(stream_id: int, user_id: int, is_host: bool = False):
