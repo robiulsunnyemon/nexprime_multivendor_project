@@ -22,6 +22,7 @@ class UserResponse(BaseModel):
     role: Role
     status: AccountStatus
     profileImageUrl: Optional[str]
+    coverImageUrl: Optional[str]
     residentcard_frontside: str
     residentcard_backside: str
     is_verified: bool
@@ -63,6 +64,7 @@ class VendorSchema(BaseModel):
     status: str
     is_verified: bool
     profileImageUrl: Optional[str]
+    coverImageUrl: Optional[str]
     residentcard_frontside: str
     residentcard_backside: str
     createdAt: datetime

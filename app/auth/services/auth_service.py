@@ -383,6 +383,7 @@ async def get_profile_service(user) -> dict:
         "role": user.role,
         "status": user.status,
         "profileImageUrl": user.profileImageUrl,
+        "coverImageUrl": user.coverImageUrl,
         "is_verified": user.is_verified,
         "residentcard_frontside": user.residentcard_frontside,
         "residentcard_backside": user.residentcard_backside,

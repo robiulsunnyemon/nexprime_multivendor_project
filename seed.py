@@ -98,6 +98,7 @@ async def main():
         "status": "ACTIVE",
         "is_verified": True,
         "profileImageUrl": "https://i.pravatar.cc/150?u=admin",
+        "coverImageUrl": "https://picsum.photos/seed/admincover/800/300",
         "residentcard_frontside": "https://picsum.photos/seed/adminfront/400",
         "residentcard_backside": "https://picsum.photos/seed/adminback/400",
     })
@@ -115,6 +116,7 @@ async def main():
             "status": "ACTIVE",
             "is_verified": True,
             "profileImageUrl": f"https://i.pravatar.cc/150?u=vendor{i}",
+            "coverImageUrl": f"https://picsum.photos/seed/vcover{i}/800/300",
             "residentcard_frontside": "https://picsum.photos/seed/vfront{i}/400",
             "residentcard_backside": "https://picsum.photos/seed/vback{i}/400",
         })
@@ -141,6 +143,7 @@ async def main():
             "status": "ACTIVE",
             "is_verified": True,
             "profileImageUrl": f"https://i.pravatar.cc/150?u=customer{i}",
+            "coverImageUrl": f"https://picsum.photos/seed/ccover{i}/800/300",
             "residentcard_frontside": "https://picsum.photos/seed/cfront{i}/400",
             "residentcard_backside": "https://picsum.photos/seed/cback{i}/400",
         })
