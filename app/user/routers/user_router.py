@@ -5,7 +5,7 @@ from app.core.current_user import get_admin, get_current_user
 from app.store.schemas import StorePublicResponse
 from app.store.services import StorePublicService
 from app.user.services.user_service import UserService
-from app.user.schemas.user_schemas import UserResponse, StatusUpdate, VendorSchema, KYCStatusUpdate
+from app.user.schemas.user_schemas import UserResponse, StatusUpdate, VendorSchema, KYCStatusUpdate, UserProfileUpdate
 from app.core.send_email import send_email
 customer_router = APIRouter(prefix="/customers", tags=["Users"])
 vendor_router = APIRouter(prefix="/vendors", tags=["Vendors"])
@@ -31,9 +31,20 @@ async def get_user_by_id(customer_id: int, admin=Depends(get_admin)):
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
-
-
-
+@customer_router.patch("/me", response_model=UserResponse)
+async def update_my_profile(
+    update_data: UserProfileUpdate, 
+    current_user=Depends(get_current_user)
+):
+    """
+    Update the current logged-in user profile.
+    Only provided fields will be updated.
+    """
+    try:
+        data_dict = update_data.model_dump(exclude_unset=True)
+        return await UserService.update_user_profile(current_user.id, data_dict)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 @customer_router.patch("/{customer_id}/account_status", response_model=UserResponse)
 async def update_user_status(customer_id: int,background_tasks: BackgroundTasks, data: StatusUpdate, admin=Depends(get_admin)):
     """

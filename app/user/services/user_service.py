@@ -107,3 +107,27 @@ class UserService:
             data={"status": status}
         )
         return {"message": f"KYC file status updated to {status}.", "kyc_file": updated}
+
+    @staticmethod
+    async def update_user_profile(user_id: int, update_data: dict) -> dict:
+        db_user = await prisma.user.find_unique(where={"id": user_id})
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User account is not found")
+
+        # Prepare update dictionary removing None values
+        data_to_update = {k: v for k, v in update_data.items() if v is not None}
+        
+        if not data_to_update:
+            return db_user
+
+        # Hash password if it's being updated
+        if "password" in data_to_update:
+            import bcrypt
+            hashed_pw = bcrypt.hashpw(data_to_update["password"].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            data_to_update["password"] = hashed_pw
+
+        updated_user = await prisma.user.update(
+            where={"id": user_id},
+            data=data_to_update
+        )
+        return updated_user

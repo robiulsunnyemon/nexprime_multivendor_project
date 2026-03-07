@@ -81,3 +81,10 @@ class KycStatus(str, Enum):
 
 class KYCStatusUpdate(BaseModel):
     status: KycStatus
+
+class UserProfileUpdate(BaseModel):
+    fullname: Optional[str] = None
+    phonenumber: Optional[str] = None
+    password: Optional[str] = None
+    profileImageUrl: Optional[str] = None
+    coverImageUrl: Optional[str] = None
