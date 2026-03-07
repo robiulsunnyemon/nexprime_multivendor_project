@@ -21,6 +21,9 @@ class UserResponse(BaseModel):
     phonenumber: str
     role: Role
     status: AccountStatus
+    profileImageUrl: Optional[str]
+    residentcard_frontside: str
+    residentcard_backside: str
     is_verified: bool
     createdAt: datetime
     updatedAt: datetime
@@ -59,6 +62,7 @@ class VendorSchema(BaseModel):
     role: str
     status: str
     is_verified: bool
+    profileImageUrl: Optional[str]
     residentcard_frontside: str
     residentcard_backside: str
     createdAt: datetime

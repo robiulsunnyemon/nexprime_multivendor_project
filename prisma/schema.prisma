@@ -36,11 +36,11 @@ model User {
   phonenumber            String        @unique
   password               String
 
-
   role                   Role          @default(CUSTOMER)
   status                 AccountStatus @default(INACTIVE)
   is_verified            Boolean       @default(false)
 
+  profileImageUrl        String?
 
   residentcard_frontside String
   residentcard_backside  String

@@ -58,6 +58,18 @@ class ChatService:
 
     @staticmethod
     async def get_chat_history(user_id: int, other_user_id: int):
+        # Mark all unread messages from the other user as read
+        await prisma.message.update_many(
+            where={
+                "senderId": other_user_id,
+                "receiverId": user_id,
+                "isRead": False
+            },
+            data={
+                "isRead": True
+            }
+        )
+
         return await prisma.message.find_many(
             where={
                 "OR": [
@@ -84,14 +96,20 @@ class ChatService:
         
         interacted_user_ids = []
         user_last_messages = {}
+        unread_counts = {}
+
         for m in interacted_messages:
             other_id = m.receiverId if m.senderId == current_user_id else m.senderId
             if other_id not in interacted_user_ids:
                 interacted_user_ids.append(other_id)
                 user_last_messages[other_id] = {
-                    "content": m.content,
+                    "content": m.content if m.type == "TEXT" else f"Sent {m.type.lower()}",
                     "time": m.createdAt
                 }
+            
+            # Count unread messages sent TO the current user BY the other user
+            if m.receiverId == current_user_id and not m.isRead:
+                unread_counts[other_id] = unread_counts.get(other_id, 0) + 1
 
         # 2. Get all users (except self)
         all_users = await prisma.user.find_many(
@@ -99,27 +117,47 @@ class ChatService:
             order={"lastActiveAt": "desc"}
         )
 
+        user_dict = {user.id: user for user in all_users}
+
         # 3. Build response with priority
         interacted_list = []
         others_list = []
         
         online_ids = manager.active_connections.keys()
 
-        for user in all_users:
+        # Build list for users we have interacted with
+        for uid in interacted_user_ids:
+            if uid in user_dict:
+                user = user_dict[uid]
+                res = ActiveUserResponse(
+                    id=user.id,
+                    fullname=user.fullname,
+                    email=user.email,
+                    isOnline=user.id in online_ids,
+                    lastActiveAt=user.lastActiveAt,
+                    lastMessage=user_last_messages[uid]["content"],
+                    lastMessageTime=user_last_messages[uid]["time"],
+                    unreadCount=unread_counts.get(uid, 0),
+                    profileImageUrl=user.profileImageUrl
+                )
+                interacted_list.append(res)
+                # Remove so they don't appear in others_list
+                del user_dict[uid]
+
+        # Sort interacted_list strictly by lastMessageTime desc
+        interacted_list.sort(key=lambda x: x.lastMessageTime, reverse=True)
+
+        for user in user_dict.values():
             res = ActiveUserResponse(
                 id=user.id,
                 fullname=user.fullname,
                 email=user.email,
                 isOnline=user.id in online_ids,
-                lastActiveAt=user.lastActiveAt
+                lastActiveAt=user.lastActiveAt,
+                unreadCount=0,
+                profileImageUrl=user.profileImageUrl
             )
-            
-            if user.id in interacted_user_ids:
-                res.lastMessage = user_last_messages[user.id]["content"]
-                res.lastMessageTime = user_last_messages[user.id]["time"]
-                interacted_list.append(res)
-            else:
-                others_list.append(res)
+            others_list.append(res)
                 
         return interacted_list + others_list
 

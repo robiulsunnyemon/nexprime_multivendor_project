@@ -49,3 +49,5 @@ class MessageResponse(BaseModel):
 class ActiveUserResponse(ChatUserResponse):
     lastMessage: Optional[str] = None
     lastMessageTime: Optional[datetime] = None
+    unreadCount: int = 0
+    profileImageUrl: Optional[str] = None
