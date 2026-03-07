@@ -438,3 +438,47 @@ async def logout_service(refresh_token: str) -> dict:
         await prisma.refreshtoken.delete(where={"id": stored_token.id})
     
     return {"message": "Successfully logged out. Refresh token revoked."}
+
+
+async def verify_forgot_password_service(email: str, code: str) -> dict:
+    user = await prisma.user.find_unique(where={"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    await _verify_otp_code(user.id, code)
+    
+    # Create a short-lived reset token (10 minutes)
+    payload = {
+        "sub": str(user.id),
+        "type": "password_reset",
+        "exp": datetime.utcnow() + timedelta(minutes=10),
+    }
+    reset_token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
+    
+    # Optional: Delete the OTP after successful verification
+    await prisma.otp.delete_many(where={"userId": user.id})
+    
+    return {"reset_token": reset_token}
+
+
+async def reset_password_v2_service(reset_token: str, new_password: str) -> dict:
+    try:
+        payload = jwt.decode(reset_token, settings.JWT_SECRET, algorithms=["HS256"])
+        if payload.get("type") != "password_reset":
+            raise HTTPException(status_code=401, detail="Invalid token type.")
+        user_id = int(payload.get("sub"))
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Reset token expired.")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid reset token.")
+
+    user = await prisma.user.find_unique(where={"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    await prisma.user.update(
+        where={"id": user.id},
+        data={"password": _hash_password(new_password)},
+    )
+
+    return {"message": "Password changed successfully."}

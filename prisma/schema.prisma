@@ -65,6 +65,8 @@ model User {
   sentMessages           Message[]     @relation("SentMessages")
   receivedMessages       Message[]     @relation("ReceivedMessages")
   liveStreams            LiveStream[]  @relation("UserLiveStreams")
+  wallet                 Wallet?
+  walletTransactions     WalletTransaction[]
 }
 
 
@@ -406,4 +408,28 @@ model LiveStream {
 
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+model Wallet {
+  id      Int   @id @default(autoincrement())
+  balance Float @default(0.0)
+  userId  Int   @unique
+  user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  updatedAt DateTime @updatedAt
+}
+
+enum TransactionType {
+  TOPUP
+  FEE_DEDUCTION
+}
+
+model WalletTransaction {
+  id          Int             @id @default(autoincrement())
+  amount      Float
+  type        TransactionType
+  description String?
+  userId      Int
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }

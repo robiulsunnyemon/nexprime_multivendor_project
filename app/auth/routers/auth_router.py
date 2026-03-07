@@ -11,6 +11,9 @@ from app.auth.schemas.auth_schema import (
     TokenResponse,
     VerifyOTPRequest,
     RefreshTokenRequest,
+    VerifyForgotOTPRequest,
+    ResetPasswordV2Request,
+    ResetTokenResponse,
 )
 
 from app.auth.services.auth_service import (
@@ -23,6 +26,8 @@ from app.auth.services.auth_service import (
     verify_otp_service, vendor_signup_service,
     refresh_token_service,
     logout_service,
+    verify_forgot_password_service,
+    reset_password_v2_service,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -145,17 +150,28 @@ async def forgot_password(body: ForgotPasswordRequest):
 
 
 # ─────────────────────────────────────────────────────────
+# POST /auth/verify-forgot-password
+# ─────────────────────────────────────────────────────────
+@router.post(
+    "/verify-forgot-password",
+    response_model=ResetTokenResponse,
+    summary="Verify OTP for forgotten password and get reset token",
+)
+async def verify_forgot_password_otp(body: VerifyForgotOTPRequest):
+    return await verify_forgot_password_service(email=body.email, code=body.code)
+
+
+# ─────────────────────────────────────────────────────────
 # POST /auth/reset-password
 # ─────────────────────────────────────────────────────────
 @router.post(
     "/reset-password",
     response_model=MessageResponse,
-    summary="Verify OTP and set new password",
+    summary="Reset password using reset token",
 )
-async def reset_password(body: ResetPasswordRequest):
-    return await reset_password_service(
-        email=body.email,
-        code=body.code,
+async def reset_password(body: ResetPasswordV2Request):
+    return await reset_password_v2_service(
+        reset_token=body.reset_token,
         new_password=body.new_password,
     )
 

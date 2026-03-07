@@ -11,11 +11,23 @@ class MarketingProductService:
         creator_id: int, 
         image_files: List[UploadFile]
     ):
+        from app.user.services.wallet_service import WalletService
+        
+        # 1. Deduct fee from wallet
+        fee = product_data.publishingFee
+        await WalletService.deduct_funds(
+            user_id=creator_id,
+            amount=fee,
+            description=f"Publishing fee for product: {product_data.name}"
+        )
+
+        # 2. Upload images
         image_urls = []
         for file in image_files:
             url = await upload_image_helper(file, folder="marketing_products")
             image_urls.append(url)
         
+        # 3. Create product
         return await prisma.marketingproduct.create(
             data={
                 **product_data.model_dump(),

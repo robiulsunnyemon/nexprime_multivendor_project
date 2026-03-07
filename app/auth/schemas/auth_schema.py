@@ -26,6 +26,23 @@ class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
 
+class VerifyForgotOTPRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+
+class ResetPasswordV2Request(BaseModel):
+    reset_token: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strength(cls, v: str) -> str:
+        if len(v) < 6:
+            raise ValueError("Password must be at least 6 characters long.")
+        return v
+
+
 class ResetPasswordRequest(BaseModel):
     email: EmailStr
     code: str
@@ -51,6 +68,10 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     message: Optional[str] = None
     is_kyc_pending: Optional[bool] = False
+
+
+class ResetTokenResponse(BaseModel):
+    reset_token: str
 
 
 class UserOut(BaseModel):

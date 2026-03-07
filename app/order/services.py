@@ -380,6 +380,24 @@ class PaymentService:
             raise HTTPException(status_code=400, detail=str(e))
 
     @staticmethod
+    async def create_wallet_topup_intent(user_id: int, amount: float):
+        # amount is in dollars, convert to cents for Stripe
+        stripe_amount = int(amount * 100)
+        
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=stripe_amount,
+                currency="usd",
+                metadata={
+                    "type": "wallet_topup",
+                    "user_id": user_id
+                }
+            )
+            return {"clientSecret": intent.client_secret}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
+    @staticmethod
     async def handle_webhook(payload: bytes, sig_header: str):
         endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET") or ""
         try:
@@ -399,10 +417,22 @@ class PaymentService:
 
         if event['type'] == 'payment_intent.succeeded':
             intent = event['data']['object']
-            order_id = int(intent['metadata']['order_id'])
-            await PaymentService.process_successful_payment(order_id)
+            p_type = intent['metadata'].get("type")
+            
+            if p_type == "wallet_topup":
+                user_id = int(intent['metadata']['user_id'])
+                amount = intent['amount'] / 100.0
+                await PaymentService.process_wallet_topup(user_id, amount)
+            else:
+                order_id = int(intent['metadata']['order_id'])
+                await PaymentService.process_successful_payment(order_id)
         
         return {"status": "success"}
+
+    @staticmethod
+    async def process_wallet_topup(user_id: int, amount: float):
+        from app.user.services.wallet_service import WalletService
+        await WalletService.add_funds(user_id, amount, description=f"Stripe Top-up: ${amount}")
 
     @staticmethod
     async def process_successful_payment(order_id: int):
