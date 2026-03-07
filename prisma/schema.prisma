@@ -64,6 +64,7 @@ model User {
   ratings                Rating[]
   sentMessages           Message[]     @relation("SentMessages")
   receivedMessages       Message[]     @relation("ReceivedMessages")
+  liveStreams            LiveStream[]  @relation("UserLiveStreams")
 }
 
 
@@ -390,3 +391,19 @@ model Message {
   @@index([receiverId])
 }
 
+// --- Live Streaming ---
+model LiveStream {
+  id           Int      @id @default(autoincrement())
+  thumbnail    String
+  title        String
+  offer        String?
+  endDateTime  DateTime?
+  isActive     Boolean  @default(true)
+  viewsCount   Int      @default(0)
+
+  streamerId   Int
+  streamer     User     @relation("UserLiveStreams", fields: [streamerId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
 
+    LIVEKIT_URL: str = "wss://dummy.livekit.cloud"
+    LIVEKIT_API_KEY: str = "dummy_key"
+    LIVEKIT_API_SECRET: str = "dummy_secret"
+
     class Config:
         env_file = ".env"
 
