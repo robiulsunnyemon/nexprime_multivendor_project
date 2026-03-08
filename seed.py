@@ -76,78 +76,108 @@ async def main():
         main_id = main_cat_map[main_name]
         created_sub_cats_map[main_name] = []
         for sub_name in subs:
-            sc = await prisma.subcategory.create(data={
+            sc = await prisma.subcategory.find_first(where={
                 "name": sub_name,
-                "mainCategoryId": main_id,
-                "image": f"https://picsum.photos/seed/{sub_name}/200"
+                "mainCategoryId": main_id
             })
+            if not sc:
+                sc = await prisma.subcategory.create(data={
+                    "name": sub_name,
+                    "mainCategoryId": main_id,
+                    "image": f"https://picsum.photos/seed/{sub_name}/200"
+                })
             created_sub_cats_map[main_name].append(sc)
-            print(f"Created SubCategory: {sub_name} under {main_name}")
+            print(f"Ensured SubCategory: {sub_name} under {main_name}")
 
     # 4. Create Users (1 Admin, 10 Vendors, 10 Customers)
     print("Creating Users & Stores...")
     
     # Create Admin
     admin_email = "admin@nexprime.com"
-    await prisma.user.create(data={
-        "fullname": "Head Admin",
-        "email": admin_email,
-        "phonenumber": "01700000000",
-        "password": hash_password("admin123"),
-        "role": "ADMIN",
-        "status": "ACTIVE",
-        "is_verified": True,
-        "profileImageUrl": "https://i.pravatar.cc/150?u=admin",
-        "coverImageUrl": "https://picsum.photos/seed/admincover/800/300",
-        "residentcard_frontside": "https://picsum.photos/seed/adminfront/400",
-        "residentcard_backside": "https://picsum.photos/seed/adminback/400",
-    })
-    print(f"Created Admin: {admin_email}")
+    admin_user = await prisma.user.upsert(
+        where={"email": admin_email},
+        data={
+            "create": {
+                "fullname": "Head Admin",
+                "email": admin_email,
+                "phonenumber": "01700000000",
+                "password": hash_password("admin123"),
+                "role": "ADMIN",
+                "status": "ACTIVE",
+                "is_verified": True,
+                "profileImageUrl": "https://i.pravatar.cc/150?u=admin",
+                "coverImageUrl": "https://picsum.photos/seed/admincover/800/300",
+                "residentcard_frontside": "https://picsum.photos/seed/adminfront/400",
+                "residentcard_backside": "https://picsum.photos/seed/adminback/400",
+            },
+            "update": {}
+        }
+    )
+    print(f"Ensured Admin: {admin_email}")
 
     vendor_stores = []
     for i in range(1, 11):
         email = f"vendor{i}@nexprime.com"
-        user = await prisma.user.create(data={
-            "fullname": f"Vendor {i}",
-            "email": email,
-            "phonenumber": f"018000000{i:02d}",
-            "password": hash_password("password123"),
-            "role": "VENDOR",
-            "status": "ACTIVE",
-            "is_verified": True,
-            "profileImageUrl": f"https://i.pravatar.cc/150?u=vendor{i}",
-            "coverImageUrl": f"https://picsum.photos/seed/vcover{i}/800/300",
-            "residentcard_frontside": "https://picsum.photos/seed/vfront{i}/400",
-            "residentcard_backside": "https://picsum.photos/seed/vback{i}/400",
-        })
+        user = await prisma.user.upsert(
+            where={"email": email},
+            data={
+                "create": {
+                    "fullname": f"Vendor {i}",
+                    "email": email,
+                    "phonenumber": f"018000000{i:02d}",
+                    "password": hash_password("password123"),
+                    "role": "VENDOR",
+                    "status": "ACTIVE",
+                    "is_verified": True,
+                    "profileImageUrl": f"https://i.pravatar.cc/150?u=vendor{i}",
+                    "coverImageUrl": f"https://picsum.photos/seed/vcover{i}/800/300",
+                    "residentcard_frontside": "https://picsum.photos/seed/vfront{i}/400",
+                    "residentcard_backside": "https://picsum.photos/seed/vback{i}/400",
+                },
+                "update": {}
+            }
+        )
         
-        store = await prisma.store.create(data={
-            "name": f"Shop {i} Emporium",
-            "bio": f"Quality products from Shop {i}",
-            "address": f"Address {i}, Marketplace",
-            "photo": f"https://picsum.photos/seed/shop{i}/400",
-            "vendorId": user.id
-        })
+        store = await prisma.store.upsert(
+            where={"vendorId": user.id},
+            data={
+                "create": {
+                    "name": f"Shop {i} Emporium",
+                    "bio": f"Quality products from Shop {i}",
+                    "address": f"Address {i}, Marketplace",
+                    "photo": f"https://picsum.photos/seed/shop{i}/400",
+                    "vendorId": user.id
+                },
+                "update": {}
+            }
+        )
         vendor_stores.append(store)
-        print(f"Created Vendor & Store: {email}")
+        print(f"Ensured Vendor & Store: {email}")
 
     customers = []
     for i in range(1, 11):
         email = f"customer{i}@nexprime.com"
-        user = await prisma.user.create(data={
-            "fullname": f"Customer {i}",
-            "email": email,
-            "phonenumber": f"019000000{i:02d}",
-            "password": hash_password("password123"),
-            "role": "CUSTOMER",
-            "status": "ACTIVE",
-            "is_verified": True,
-            "profileImageUrl": f"https://i.pravatar.cc/150?u=customer{i}",
-            "coverImageUrl": f"https://picsum.photos/seed/ccover{i}/800/300",
-            "residentcard_frontside": "https://picsum.photos/seed/cfront{i}/400",
-            "residentcard_backside": "https://picsum.photos/seed/cback{i}/400",
-        })
+        user = await prisma.user.upsert(
+            where={"email": email},
+            data={
+                "create": {
+                    "fullname": f"Customer {i}",
+                    "email": email,
+                    "phonenumber": f"019000000{i:02d}",
+                    "password": hash_password("password123"),
+                    "role": "CUSTOMER",
+                    "status": "ACTIVE",
+                    "is_verified": True,
+                    "profileImageUrl": f"https://i.pravatar.cc/150?u=customer{i}",
+                    "coverImageUrl": f"https://picsum.photos/seed/ccover{i}/800/300",
+                    "residentcard_frontside": "https://picsum.photos/seed/cfront{i}/400",
+                    "residentcard_backside": "https://picsum.photos/seed/cback{i}/400",
+                },
+                "update": {}
+            }
+        )
         customers.append(user)
+        print(f"Ensured Customer: {email}")
         
         # # 4a. Create Delivery Address for each customer
         # addr = await prisma.deliveryaddress.create(data={
@@ -179,25 +209,30 @@ async def main():
         sale_price = round(base_price * 0.8, 2) if is_discount_sale else base_price
         discount_percentage = 20.0 if is_discount_sale else 0.0
 
-        prod = await prisma.product.create(data={
-            "name": f"Product Item {i}",
-            "description": f"Quality {group} item from {store.name}.",
-            "basePrice": base_price,
-            "stockUnits": random.randint(50, 200),
-            "size": random.sample(sizes, k=random.randint(1, 3)),
-            "colors": random.sample(colors_pool, k=random.randint(1, 3)),
-            "isDiscountSale": is_discount_sale,
-            "salePrice": sale_price,
-            "discountPercentage": discount_percentage,
-            "shippingResponsibility": random.choice(["CUSTOMER", "VENDOR"]),
-            "shippingCharge": random.randint(0, 50),
-            "total_payable_amount": sale_price + 20, # dummy total
-            "images": [f"https://picsum.photos/seed/prod{i}/500"],
-            "storeId": store.id,
-            "categories": {"connect": [{"id": sc.id} for sc in subs_to_link]}
-        })
-        all_products.append(prod)
-        print(f"Created Product {i}")
+        existing_prod = await prisma.product.find_first(where={"name": f"Product Item {i}"})
+        if not existing_prod:
+            prod = await prisma.product.create(data={
+                "name": f"Product Item {i}",
+                "description": f"Quality {group} item from {store.name}.",
+                "basePrice": base_price,
+                "stockUnits": random.randint(50, 200),
+                "size": random.sample(sizes, k=random.randint(1, 3)),
+                "colors": random.sample(colors_pool, k=random.randint(1, 3)),
+                "isDiscountSale": is_discount_sale,
+                "salePrice": sale_price,
+                "discountPercentage": discount_percentage,
+                "shippingResponsibility": random.choice(["CUSTOMER", "VENDOR"]),
+                "shippingCharge": random.randint(0, 50),
+                "total_payable_amount": sale_price + 20, # dummy total
+                "images": [f"https://picsum.photos/seed/prod{i}/500"],
+                "storeId": store.id,
+                "categories": {"connect": [{"id": sc.id} for sc in subs_to_link]}
+            })
+            all_products.append(prod)
+            print(f"Created Product {i}")
+        else:
+            all_products.append(existing_prod)
+            print(f"Ensured Product {i}")
 
     # # 6. Create Example Orders
     # print("Creating Example Orders...")
@@ -248,24 +283,25 @@ async def main():
     print("Finalizing Seeding...")
     vendors_users = await prisma.user.find_many(where={"role": "VENDOR"})
     for v_user in vendors_users:
-        await prisma.kycfile.create(data={
-            "title": f"KYC for {v_user.fullname}",
-            "fileUrl": "https://picsum.photos/seed/kyc/400",
-            "status": "ACTIVE",
-            "vendorId": v_user.id
-        })
+        existing_kyc = await prisma.kycfile.find_first(where={"vendorId": v_user.id})
+        if not existing_kyc:
+            await prisma.kycfile.create(data={
+                "title": f"KYC for {v_user.fullname}",
+                "fileUrl": "https://picsum.photos/seed/kyc/400",
+                "status": "ACTIVE",
+                "vendorId": v_user.id
+            })
     
     for i in range(1, 4):
-        await prisma.banner.create(data={
-            "imageUrl": f"https://picsum.photos/seed/banner{i}/1200/400",
-            "link": "https://nexprime.com"
-        })
+        existing_banner = await prisma.banner.find_first(where={"imageUrl": f"https://picsum.photos/seed/banner{i}/1200/400"})
+        if not existing_banner:
+            await prisma.banner.create(data={
+                "imageUrl": f"https://picsum.photos/seed/banner{i}/1200/400",
+                "link": "https://nexprime.com"
+            })
 
     print("--- Seeding Completed Successfully ---")
     await prisma.disconnect()
-
-if __name__ == "__main__":
-    asyncio.run(main())
 
 if __name__ == "__main__":
     asyncio.run(main())
