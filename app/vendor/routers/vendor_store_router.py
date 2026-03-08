@@ -4,7 +4,9 @@ from app.vendor.services.vendor_store_service import (
     create_store_service,
     get_my_store_service,
     update_store_service,
+    get_vendor_stats_service,
 )
+from app.vendor.schemas import VendorStatsResponse
 
 from app.auth.services.auth_service import vendor_signup_service
 
@@ -77,3 +79,7 @@ async def update_my_store(
         photo_file=photo,
         cover_file=cover_photo
     )
+
+@router.get("/dashboard/stats", response_model=VendorStatsResponse, summary="Get vendor dashboard statistics")
+async def get_vendor_stats(current_vendor=Depends(get_vendor)):
+    return await get_vendor_stats_service(vendor_id=current_vendor.id)

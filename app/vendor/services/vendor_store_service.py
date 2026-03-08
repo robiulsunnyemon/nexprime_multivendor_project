@@ -98,3 +98,61 @@ async def update_store_service(
     store_dict = updated_store.model_dump()
     store_dict["followerCount"] = follower_count
     return {"message": "Store updated successfully.", "store": store_dict}
+
+async def get_vendor_stats_service(vendor_id: int) -> dict:
+    from datetime import datetime
+    
+    # 1. Get vendor's store
+    store = await prisma.store.find_unique(where={"vendorId": vendor_id})
+    if not store:
+        raise HTTPException(status_code=404, detail="Store not found for this vendor.")
+    
+    # 2. Total Earnings and Pending Orders
+    suborders = await prisma.suborder.find_many(
+        where={"storeId": store.id}
+    )
+    
+    total_earnings = sum(so.vendorEarnings for so in suborders)
+    total_pending = sum(1 for so in suborders if not so.isFulfield)
+    
+    # 3. Total Products
+    total_products = await prisma.product.count(where={"storeId": store.id})
+    
+    # 4. Total Followers
+    total_followers = await prisma.user.count(
+        where={"followedStores": {"some": {"id": store.id}}}
+    )
+    
+    # 5. Last 7 Days Earnings
+    from datetime import datetime, timedelta
+    now = datetime.now()
+    last_7_days = []
+    
+    for i in range(7):
+        target_date = now - timedelta(days=i)
+        day_label = target_date.strftime("%A") # Monday, Tuesday, etc.
+        
+        # Sum earnings for this specific day
+        day_sum = sum(
+            so.vendorEarnings for so in suborders 
+            if so.createdAt.year == target_date.year and 
+               so.createdAt.month == target_date.month and 
+               so.createdAt.day == target_date.day
+        )
+        
+        last_7_days.append({
+            "day": day_label,
+            "earnings": day_sum
+        })
+    
+    # Reverse to chronological order
+    last_7_days.reverse()
+    
+    return {
+        "storeName": store.name,
+        "totalEarnings": total_earnings,
+        "last7DaysEarnings": last_7_days,
+        "totalPendingOrders": total_pending,
+        "totalProducts": total_products,
+        "totalFollowers": total_followers
+    }
