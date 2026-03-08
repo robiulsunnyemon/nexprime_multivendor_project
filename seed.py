@@ -16,29 +16,29 @@ async def main():
 
     print("--- Starting Comprehensive Seed ---")
 
-    # 1. Cleanup ALL existing data for a fresh start
-    print("Cleaning up all existing data...")
-    # Delete in order of dependencies
-    await prisma.rating.delete_many()
-    await prisma.orderitem.delete_many()
-    await prisma.suborder.delete_many()
-    await prisma.order.delete_many()
-    await prisma.deliveryaddress.delete_many()
-    await prisma.cartitem.delete_many()
-    await prisma.searchhistory.delete_many()
-    await prisma.refreshtoken.delete_many()
-    await prisma.otp.delete_many()
-    await prisma.marketingproduct.delete_many()
-    await prisma.kycfile.delete_many()
-    await prisma.product.delete_many()
-    await prisma.store.delete_many()
-    await prisma.subcategory.delete_many()
-    await prisma.user.delete_many()
-    await prisma.maincategory.delete_many()
-    await prisma.banner.delete_many()
-    await prisma.systemsetting.delete_many()
-    await prisma.marketingproductsetting.delete_many()
-    print("Cleanup completed.")
+    # # 1. Cleanup ALL existing data for a fresh start
+    # print("Cleaning up all existing data...")
+    # # Delete in order of dependencies
+    # await prisma.rating.delete_many()
+    # await prisma.orderitem.delete_many()
+    # await prisma.suborder.delete_many()
+    # await prisma.order.delete_many()
+    # await prisma.deliveryaddress.delete_many()
+    # await prisma.cartitem.delete_many()
+    # await prisma.searchhistory.delete_many()
+    # await prisma.refreshtoken.delete_many()
+    # await prisma.otp.delete_many()
+    # await prisma.marketingproduct.delete_many()
+    # await prisma.kycfile.delete_many()
+    # await prisma.product.delete_many()
+    # await prisma.store.delete_many()
+    # await prisma.subcategory.delete_many()
+    # await prisma.user.delete_many()
+    # await prisma.maincategory.delete_many()
+    # await prisma.banner.delete_many()
+    # await prisma.systemsetting.delete_many()
+    # await prisma.marketingproductsetting.delete_many()
+    # print("Cleanup completed.")
 
     # 2. Map Main Categories
     print("Mapping Main Categories...")
@@ -149,16 +149,16 @@ async def main():
         })
         customers.append(user)
         
-        # 4a. Create Delivery Address for each customer
-        addr = await prisma.deliveryaddress.create(data={
-            "fullName": user.fullname,
-            "phoneNumber": user.phonenumber,
-            "postcode": f"100{i}",
-            "fullAddress": f"House {i*10}, Road {i}, Dhaka, Bangladesh",
-            "buildingNameRoomNumber": f"Building {i}, Flat {i}A",
-            "userId": user.id
-        })
-        print(f"Created Customer & Address: {email}")
+        # # 4a. Create Delivery Address for each customer
+        # addr = await prisma.deliveryaddress.create(data={
+        #     "fullName": user.fullname,
+        #     "phoneNumber": user.phonenumber,
+        #     "postcode": f"100{i}",
+        #     "fullAddress": f"House {i*10}, Road {i}, Dhaka, Bangladesh",
+        #     "buildingNameRoomNumber": f"Building {i}, Flat {i}A",
+        #     "userId": user.id
+        # })
+        # print(f"Created Customer & Address: {email}")
 
     # 5. Create 30 Products
     print("Creating 30 Products...")
@@ -199,50 +199,50 @@ async def main():
         all_products.append(prod)
         print(f"Created Product {i}")
 
-    # 6. Create Example Orders
-    print("Creating Example Orders...")
-    for i in range(1, 6):
-        customer = random.choice(customers)
-        addr = await prisma.deliveryaddress.find_first(where={"userId": customer.id})
+    # # 6. Create Example Orders
+    # print("Creating Example Orders...")
+    # for i in range(1, 6):
+    #     customer = random.choice(customers)
+    #     addr = await prisma.deliveryaddress.find_first(where={"userId": customer.id})
         
-        # Pick 3 random products from different stores
-        order_prods = random.sample(all_products, 3)
-        total_amount = sum(p.salePrice for p in order_prods)
+    #     # Pick 3 random products from different stores
+    #     order_prods = random.sample(all_products, 3)
+    #     total_amount = sum(p.salePrice for p in order_prods)
         
-        # Create Main Order
-        order = await prisma.order.create(data={
-            "userId": customer.id,
-            "deliveryAddressId": addr.id,
-            "totalAmount": total_amount,
-            "isPaid": i % 2 == 0,
-            "status": "PENDING"
-        })
+    #     # Create Main Order
+    #     order = await prisma.order.create(data={
+    #         "userId": customer.id,
+    #         "deliveryAddressId": addr.id,
+    #         "totalAmount": total_amount,
+    #         "isPaid": i % 2 == 0,
+    #         "status": "PENDING"
+    #     })
         
-        # Group by store for SubOrders
-        store_groups = {}
-        for p in order_prods:
-            if p.storeId not in store_groups:
-                store_groups[p.storeId] = []
-            store_groups[p.storeId].append(p)
+    #     # Group by store for SubOrders
+    #     store_groups = {}
+    #     for p in order_prods:
+    #         if p.storeId not in store_groups:
+    #             store_groups[p.storeId] = []
+    #         store_groups[p.storeId].append(p)
             
-        for store_id, prods in store_groups.items():
-            sub_total = sum(p.salePrice for p in prods)
-            sub_order = await prisma.suborder.create(data={
-                "orderId": order.id,
-                "storeId": store_id,
-                "subTotal": sub_total,
-                "isFulfield": False,
-                "isComplete": False
-            })
+    #     for store_id, prods in store_groups.items():
+    #         sub_total = sum(p.salePrice for p in prods)
+    #         sub_order = await prisma.suborder.create(data={
+    #             "orderId": order.id,
+    #             "storeId": store_id,
+    #             "subTotal": sub_total,
+    #             "isFulfield": False,
+    #             "isComplete": False
+    #         })
             
-            for p in prods:
-                await prisma.orderitem.create(data={
-                    "subOrderId": sub_order.id,
-                    "productId": p.id,
-                    "quantity": 1,
-                    "price": p.salePrice
-                })
-        print(f"Created Order {i} for {customer.email}")
+    #         for p in prods:
+    #             await prisma.orderitem.create(data={
+    #                 "subOrderId": sub_order.id,
+    #                 "productId": p.id,
+    #                 "quantity": 1,
+    #                 "price": p.salePrice
+    #             })
+    #     print(f"Created Order {i} for {customer.email}")
 
     # 7. Create KYC Files & Banners
     print("Finalizing Seeding...")
