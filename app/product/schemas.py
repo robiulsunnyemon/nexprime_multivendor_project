@@ -60,6 +60,7 @@ class StoreSimpleResponse(BaseModel):
     name: str
     address: str
     photo: str
+    coverImgUrl: Optional[str] = None
 
     class Config:
         from_attributes = True

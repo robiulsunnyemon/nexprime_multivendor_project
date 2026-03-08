@@ -186,6 +186,7 @@ async def vendor_signup_service(
     front_file: UploadFile,
     back_file: UploadFile,
     store_photo: UploadFile,
+    store_cover: UploadFile | None = None,
     kyc_file: UploadFile | None = None,
 ) -> dict:
     # 1. Check if registration is enabled
@@ -211,6 +212,10 @@ async def vendor_signup_service(
     back_url = await _upload_image(back_file, folder="resident_cards")
     store_url = await _upload_image(store_photo, folder="stores")
     
+    cover_url = None
+    if store_cover:
+        cover_url = await _upload_image(store_cover, folder="stores")
+    
     kyc_url = None
     if kyc_file:
         kyc_url = await _upload_image(kyc_file, folder="vendor_kyc")
@@ -230,6 +235,7 @@ async def vendor_signup_service(
                 "bio": store_bio,
                 "address": store_address,
                 "photo": store_url,
+                "coverImgUrl": cover_url,
             }
         },
     }

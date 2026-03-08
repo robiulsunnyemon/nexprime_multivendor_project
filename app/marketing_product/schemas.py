@@ -20,6 +20,15 @@ class MarketingProductBase(BaseModel):
 class MarketingProductCreate(MarketingProductBase):
     pass
 
+class MarketingProductUpdate(BaseModel):
+    name: Optional[str] = None
+    goodsType: Optional[str] = None
+    location: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[float] = None
+    shippingResponsibility: Optional[ShippingResponsibility] = None
+    shippingCharge: Optional[float] = None
+
 class MarketingProductResponse(MarketingProductBase):
     id: int
     images: List[str]

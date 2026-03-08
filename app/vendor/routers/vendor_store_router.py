@@ -44,6 +44,7 @@ async def create_store(
     bio: str = Form(None),
     address: str = Form(...),
     photo: UploadFile = File(...),
+    cover_photo: UploadFile = File(None),
     current_vendor=Depends(get_vendor),
 ):
     return await create_store_service(
@@ -51,6 +52,7 @@ async def create_store(
         bio=bio,
         address=address,
         photo_file=photo,
+        cover_file=cover_photo,
         vendor_id=current_vendor.id
     )
 
@@ -64,6 +66,7 @@ async def update_my_store(
     bio: str = Form(None),
     address: str = Form(None),
     photo: UploadFile = File(None),
+    cover_photo: UploadFile = File(None),
     current_vendor=Depends(get_vendor),
 ):
     return await update_store_service(
@@ -71,5 +74,6 @@ async def update_my_store(
         name=name,
         bio=bio,
         address=address,
-        photo_file=photo
+        photo_file=photo,
+        cover_file=cover_photo
     )

@@ -4,6 +4,7 @@ from app.core.current_user import get_current_user
 from app.database.db import prisma
 from app.marketing_product.schemas import (
     MarketingProductCreate,
+    MarketingProductUpdate,
     MarketingProductWithCreatorResponse,
     ShippingResponsibility
 )
@@ -90,4 +91,34 @@ async def delete_marketing_product(
         product_id=product_id,
         user_id=current_user.id,
         user_role=str(current_user.role)
+    )
+
+@router.patch("/{product_id}", response_model=MarketingProductWithCreatorResponse, summary="Update a marketing product (Creator only)")
+async def update_marketing_product(
+    product_id: int,
+    name: Optional[str] = Form(None),
+    shippingCharge: Optional[float] = Form(None),
+    goodsType: Optional[str] = Form(None),
+    location: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    price: Optional[float] = Form(None),
+    shippingResponsibility: Optional[ShippingResponsibility] = Form(None),
+    images: Optional[List[UploadFile]] = File(None),
+    current_user=Depends(get_current_user)
+):
+    update_data = MarketingProductUpdate(
+        name=name,
+        shippingCharge=shippingCharge,
+        goodsType=goodsType,
+        location=location,
+        description=description,
+        price=price,
+        shippingResponsibility=shippingResponsibility
+    )
+
+    return await MarketingProductService.update_marketing_product(
+        product_id=product_id,
+        user_id=current_user.id,
+        update_data=update_data,
+        image_files=images
     )

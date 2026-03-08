@@ -2,7 +2,7 @@ from app.database.db import prisma
 from app.core.upload_img_helper import upload_image_helper
 from fastapi import UploadFile, HTTPException
 from typing import List, Optional
-from app.marketing_product.schemas import MarketingProductCreate
+from app.marketing_product.schemas import MarketingProductCreate, MarketingProductUpdate
 
 class MarketingProductService:
     @staticmethod
@@ -79,3 +79,39 @@ class MarketingProductService:
         # 3. Delete
         await prisma.marketingproduct.delete(where={"id": product_id})
         return {"message": "Marketing product deleted successfully"}
+
+    @staticmethod
+    async def update_marketing_product(
+        product_id: int,
+        user_id: int,
+        update_data: MarketingProductUpdate,
+        image_files: Optional[List[UploadFile]] = None
+    ):
+        # 1. Fetch product and check ownership
+        product = await prisma.marketingproduct.find_unique(where={"id": product_id})
+        if not product:
+            raise HTTPException(status_code=404, detail="Marketing product not found")
+        
+        if product.creatorId != user_id:
+            raise HTTPException(
+                status_code=403, 
+                detail="You don't have permission to update this product"
+            )
+        
+        # 2. Prepare update data
+        data_to_update = update_data.model_dump(exclude_unset=True, exclude_none=True)
+        
+        # 3. Handle images if provided
+        if image_files:
+            image_urls = []
+            for file in image_files:
+                url = await upload_image_helper(file, folder="marketing_products")
+                image_urls.append(url)
+            data_to_update["images"] = image_urls
+        
+        # 4. Update
+        return await prisma.marketingproduct.update(
+            where={"id": product_id},
+            data=data_to_update,
+            include={"creator": True}
+        )

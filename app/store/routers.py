@@ -18,6 +18,10 @@ async def get_followed_stores(current_user=Depends(get_current_user)):
 async def get_store_by_id(store_id: int):
     return await StorePublicService.get_store_by_id(store_id)
 
+@router.get("/{store_id}/follower-count", summary="Get total follower count of a store")
+async def get_store_follower_count(store_id: int):
+    return await StorePublicService.get_store_follower_count(store_id)
+
 @router.post("/{store_id}/follow", summary="Follow/Unfollow a store (Toggle)")
 async def toggle_follow(store_id: int, current_user=Depends(get_current_user)):
     return await StorePublicService.toggle_follow_store(store_id=store_id, user_id=current_user.id)
