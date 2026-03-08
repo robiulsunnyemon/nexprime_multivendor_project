@@ -5,6 +5,11 @@ set -e
 
 echo "--- Starting NexPrime Deployment Steps ---"
 
+
+# Reset database
+echo "Resetting database..."
+python reset_db.py
+
 # Generate Prisma client
 echo "Generating Prisma client..."
 prisma generate
