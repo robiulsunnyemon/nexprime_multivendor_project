@@ -61,3 +61,21 @@ class MarketingProductService:
         if not product:
             raise HTTPException(status_code=404, detail="Marketing product not found")
         return product
+
+    @staticmethod
+    async def delete_marketing_product(product_id: int, user_id: int, user_role: str):
+        # 1. Fetch product
+        product = await prisma.marketingproduct.find_unique(where={"id": product_id})
+        if not product:
+            raise HTTPException(status_code=404, detail="Marketing product not found")
+        
+        # 2. Check authorization: Creator or Admin
+        if product.creatorId != user_id and user_role != "ADMIN":
+            raise HTTPException(
+                status_code=403, 
+                detail="You don't have permission to delete this product"
+            )
+        
+        # 3. Delete
+        await prisma.marketingproduct.delete(where={"id": product_id})
+        return {"message": "Marketing product deleted successfully"}

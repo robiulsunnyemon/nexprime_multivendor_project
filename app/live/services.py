@@ -16,6 +16,14 @@ class LiveStreamService:
 
     @staticmethod
     async def create_live_stream(streamer_id: int, data: LiveStreamCreate):
+        # 0. Check if live streaming is enabled globally
+        setting = await prisma.systemsetting.find_unique(where={"id": 1})
+        if setting and not setting.isLiveStreamingEnabled:
+            raise HTTPException(
+                status_code=403,
+                detail="Live streaming is currently disabled by the administrator."
+            )
+
         # 1. Create entry in DB
         stream = await prisma.livestream.create(
             data={

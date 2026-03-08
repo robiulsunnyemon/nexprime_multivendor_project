@@ -80,3 +80,14 @@ async def get_my_marketing_products(current_user=Depends(get_current_user)):
 @router.get("/{product_id}", response_model=MarketingProductWithCreatorResponse, summary="Get marketing product details")
 async def get_marketing_product_by_id(product_id: int):
     return await MarketingProductService.get_marketing_product_by_id(product_id)
+
+@router.delete("/{product_id}", summary="Delete a marketing product (Creator or Admin only)")
+async def delete_marketing_product(
+    product_id: int, 
+    current_user=Depends(get_current_user)
+):
+    return await MarketingProductService.delete_marketing_product(
+        product_id=product_id,
+        user_id=current_user.id,
+        user_role=str(current_user.role)
+    )
