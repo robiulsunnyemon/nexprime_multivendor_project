@@ -17,7 +17,7 @@ COPY poetry.lock .
 # Install dependencies
 RUN pip install --no-cache-dir poetry && \
     poetry config virtualenvs.create false && \
-    poetry install --no-main --no-interaction --no-ansi || pip install --no-cache-dir fastapi[standard] prisma bcrypt pyjwt cloudinary
+    poetry install --no-interaction --no-ansi || pip install --no-cache-dir fastapi[standard] prisma bcrypt pyjwt cloudinary stripe livekit-api
 
 # Copy the rest of the application
 COPY . .
