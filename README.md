@@ -4,7 +4,7 @@ NexPrime is a high-performance, scalable multi-vendor e-commerce API built with 
 
 ---
 
-## 🚀 Technology Stack & Integrations
+## Technology Stack & Integrations
 
 - **Backend Framework**: FastAPI (Asynchronous Python)
 - **Database**: PostgreSQL with Prisma Client Python (ORM)
@@ -58,7 +58,7 @@ nexprime/
 
 ---
 
-## 🛠 Advanced Modules
+## Advanced Modules
 
 ### 1. Real-Time Chat (`/chat`)
 - **WebSocket Power**: Instant messaging between customers and vendors.
@@ -88,7 +88,7 @@ nexprime/
 
 ---
 
-## 📡 API Documentation (Key Endpoints)
+## API Documentation (Key Endpoints)
 
 ### Authentication & Media
 
