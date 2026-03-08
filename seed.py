@@ -76,16 +76,17 @@ async def main():
         main_id = main_cat_map[main_name]
         created_sub_cats_map[main_name] = []
         for sub_name in subs:
-            sc = await prisma.subcategory.find_first(where={
-                "name": sub_name,
-                "mainCategoryId": main_id
-            })
-            if not sc:
-                sc = await prisma.subcategory.create(data={
-                    "name": sub_name,
-                    "mainCategoryId": main_id,
-                    "image": f"https://picsum.photos/seed/{sub_name}/200"
-                })
+            sc = await prisma.subcategory.upsert(
+                where={"name_mainCategoryId": {"name": sub_name, "mainCategoryId": main_id}},
+                data={
+                    "create": {
+                        "name": sub_name,
+                        "mainCategoryId": main_id,
+                        "image": f"https://picsum.photos/seed/{sub_name}/200"
+                    },
+                    "update": {}
+                }
+            )
             created_sub_cats_map[main_name].append(sc)
             print(f"Ensured SubCategory: {sub_name} under {main_name}")
 

@@ -302,6 +302,8 @@ model SubCategory {
   
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+
+  @@unique([name, mainCategoryId])
 }
 
 
