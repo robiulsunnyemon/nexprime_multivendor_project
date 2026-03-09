@@ -67,6 +67,8 @@ model User {
   liveStreams            LiveStream[]  @relation("UserLiveStreams")
   wallet                 Wallet?
   walletTransactions     WalletTransaction[]
+  reportsMade            MarketingProductReport[] @relation("ReporterReports")
+  reportsReceived        MarketingProductReport[] @relation("TargetReports")
 }
 
 
@@ -309,6 +311,17 @@ model SubCategory {
 }
 
 
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+}
+
+enum ReportAction {
+  NONE
+  ACCOUNT_INACTIVE
+}
+
 model MarketingProduct {
   id                     Int                    @id @default(autoincrement())
   name                   String
@@ -326,6 +339,27 @@ model MarketingProduct {
   
   createdAt              DateTime               @default(now())
   updatedAt              DateTime               @updatedAt
+
+  reports                MarketingProductReport[]
+}
+
+model MarketingProductReport {
+  id                 Int              @id @default(autoincrement())
+  content            String           @db.Text
+  status             ReportStatus     @default(PENDING)
+  action             ReportAction     @default(NONE)
+
+  reporterUserId     Int
+  reporter           User             @relation("ReporterReports", fields: [reporterUserId], references: [id], onDelete: Cascade)
+
+  targetUserId       Int
+  target             User             @relation("TargetReports", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  marketingProductId Int
+  marketingProduct   MarketingProduct @relation(fields: [marketingProductId], references: [id], onDelete: Cascade)
+
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
 }
 
 model SearchHistory {

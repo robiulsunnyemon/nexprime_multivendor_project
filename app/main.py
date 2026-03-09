@@ -22,6 +22,7 @@ from app.live.routers import router as live_stream_router
 from app.admin.routers.admin_dashboard_router import router as admin_dashboard_router
 from app.admin.routers.admin_system_setting_router import router as admin_system_setting_router
 from app.user.routers.wallet_router import router as wallet_router
+from app.report.routers import router as report_router
 
 
 @asynccontextmanager
@@ -71,3 +72,4 @@ app.include_router(live_stream_router)
 app.include_router(admin_dashboard_router)
 app.include_router(admin_system_setting_router)
 app.include_router(wallet_router)
+app.include_router(report_router)
