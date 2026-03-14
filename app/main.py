@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.database.db import prisma
+from fastapi.middleware.cors import CORSMiddleware
 from app.auth.routers.auth_router import router as auth_router
 from app.user.routers.user_router import customer_router,vendor_router
 from app.admin.routers.admin_settings_router import router as admin_settings_router
@@ -37,6 +38,15 @@ app = FastAPI(
     description="E-commerce API with FastAPI and Prisma",
     version="1.0.0",
     lifespan=lifespan
+)
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"], 
+    allow_headers=["*"], 
 )
 
 
