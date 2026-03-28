@@ -8,16 +8,16 @@ from app.vendor.services.vendor_kyc_service import (
 
 router = APIRouter(prefix="/vendor/kyc", tags=["Vendor - KYC"])
 
-@router.post("", status_code=status.HTTP_201_CREATED, summary="Upload a KYC document")
-async def upload_kyc(
-    file: UploadFile = File(...),
-    current_vendor=Depends(get_vendor),
-):
-    return await upload_kyc_service(
-        vendor_id=current_vendor.id,
-        file=file,
-        title="vendor_kyc"
-    )
+# @router.post("", status_code=status.HTTP_201_CREATED, summary="Upload a KYC document")
+# async def upload_kyc(
+#     file: UploadFile = File(...),
+#     current_vendor=Depends(get_vendor),
+# ):
+#     return await upload_kyc_service(
+#         vendor_id=current_vendor.id,
+#         file=file,
+#         title="vendor_kyc"
+#     )
 
 @router.get("/me", summary="Get my KYC documents")
 async def get_my_kyc(current_vendor=Depends(get_vendor)):
