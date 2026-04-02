@@ -89,6 +89,33 @@ class CategoryService:
         )
 
     @staticmethod
+    async def update_subcategory(
+        subcategory_id: int, 
+        name: Optional[str] = None, 
+        main_category_id: Optional[int] = None, 
+        image_file: Optional[UploadFile] = None
+    ):
+        sub_cat = await prisma.subcategory.find_unique(where={"id": subcategory_id})
+        if not sub_cat:
+            raise HTTPException(status_code=404, detail="Sub-category not found")
+        
+        update_data = {}
+        if name is not None:
+            update_data["name"] = name
+        if main_category_id is not None:
+            update_data["mainCategoryId"] = int(main_category_id)
+        if image_file:
+            # Re-upload helper already handles UploadFile
+            from app.core.upload_img_helper import upload_image_helper
+            image_url = await upload_image_helper(image_file, folder="nexprime_categories")
+            update_data["image"] = image_url
+            
+        return await prisma.subcategory.update(
+            where={"id": subcategory_id},
+            data=update_data
+        )
+
+    @staticmethod
     async def delete_subcategory(subcategory_id: int):
         sub_cat = await prisma.subcategory.find_unique(where={"id": subcategory_id})
         if not sub_cat:

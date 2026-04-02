@@ -79,6 +79,29 @@ class LiveStreamService:
         }
 
     @staticmethod
+    async def get_followed_active_streams(user_id: int):
+        # 1. Get followed store vendor IDs
+        user = await prisma.user.find_unique(
+            where={"id": user_id},
+            include={"followedStores": True}
+        )
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        vendor_ids = [store.vendorId for store in user.followedStores]
+        
+        # 2. Get active streams from these vendors
+        streams = await prisma.livestream.find_many(
+            where={
+                "isActive": True,
+                "streamerId": {"in": vendor_ids}
+            },
+            order={"createdAt": "desc"}
+        )
+        
+        return streams
+
+    @staticmethod
     async def join_stream(stream_id: int, user_id: int, is_host: bool = False):
         stream = await prisma.livestream.find_unique(where={"id": stream_id})
         if not stream:
@@ -116,12 +139,12 @@ class LiveStreamService:
         return {"token": jwt_token, "stream": stream}
 
     @staticmethod
-    async def stop_stream(stream_id: int, streamer_id: int):
+    async def stop_stream(stream_id: int, user_id: int, is_admin: bool = False):
         stream = await prisma.livestream.find_unique(where={"id": stream_id})
         if not stream:
             raise HTTPException(status_code=404, detail="Stream not found")
             
-        if stream.streamerId != streamer_id:
+        if not is_admin and stream.streamerId != user_id:
             raise HTTPException(status_code=403, detail="Not authorized to stop this stream")
 
         from datetime import datetime
@@ -132,4 +155,23 @@ class LiveStreamService:
                 "endDateTime": datetime.utcnow()
             }
         )
+
+        # Notify vendor if stopped by admin
+        if is_admin and stream.streamerId != user_id:
+            try:
+                from app.chat.services import ChatService
+                from app.chat.schemas import MessageCreate
+                notification_content = f"Your live stream (ID: {stream_id}) has been ended by an admin."
+                await ChatService.save_message(
+                    sender_id=user_id,
+                    data=MessageCreate(
+                        content=notification_content,
+                        receiverId=stream.streamerId,
+                        type="TEXT"
+                    )
+                )
+            except Exception as e:
+                # Log error but don't fail the stream stop operation
+                print(f"Error sending notification to vendor: {e}")
+
         return updated_stream

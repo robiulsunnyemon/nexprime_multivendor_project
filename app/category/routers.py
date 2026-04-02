@@ -23,6 +23,19 @@ async def create_subcategory(
 ):
     return await CategoryService.create_subcategory(name=name, main_category_id=mainCategoryId, image_file=image)
 
+@router.patch("/admin/subcategories/{subcategory_id}", response_model=SubCategoryResponse, summary="Update subcategory (Admin only)")
+async def update_subcategory(
+    subcategory_id: int,
+    name: Optional[str] = Form(None),
+    image: Optional[UploadFile] = File(None),
+    admin=Depends(get_admin)
+):
+    return await CategoryService.update_subcategory(
+        subcategory_id=subcategory_id, 
+        name=name,
+        image_file=image
+    )
+
 @router.delete("/admin/subcategories/{subcategory_id}", summary="Delete subcategory (Admin only)")
 async def delete_subcategory(
     subcategory_id: int,

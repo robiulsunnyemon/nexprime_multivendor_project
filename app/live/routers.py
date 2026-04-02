@@ -30,6 +30,13 @@ async def get_active_streams():
     """
     return await LiveStreamService.get_active_streams()
 
+@router.get("/followed", response_model=List[LiveStreamResponse])
+async def get_followed_streams(current_user=Depends(get_current_user)):
+    """
+    Get active live streams from stores the user follows.
+    """
+    return await LiveStreamService.get_followed_active_streams(user_id=current_user.id)
+
 @router.post("/{stream_id}/join", response_model=LiveTokenResponse)
 async def join_stream(
     stream_id: int, 
@@ -46,6 +53,10 @@ async def stop_stream(
     current_user=Depends(get_current_user)
 ):
     """
-    Stop an active stream. Can only be performed by the streamer.
+    Stop an active stream. Can be performed by the streamer or an admin.
     """
-    return await LiveStreamService.stop_stream(stream_id=stream_id, streamer_id=current_user.id)
+    return await LiveStreamService.stop_stream(
+        stream_id=stream_id, 
+        user_id=current_user.id, 
+        is_admin=(current_user.role == "ADMIN")
+    )

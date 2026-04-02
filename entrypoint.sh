@@ -7,20 +7,20 @@ echo "--- Starting NexPrime Deployment Steps ---"
 
 
 # Reset database
-echo "Resetting database..."
-python reset_db.py
+#echo "Resetting database..."
+#python reset_db.py
 
 # Generate Prisma client
 echo "Generating Prisma client..."
 prisma generate
 
 # Push database schema
-echo "Syncing database schema..."
-prisma db push --accept-data-loss
+#echo "Syncing database schema..."
+#prisma db push --accept-data-loss
 
 # Run seed script
-echo "Seeding initial data..."
-python seed.py
+#echo "Seeding initial data..."
+#python seed.py
 
 # Verify critical dependencies
 echo "Verifying dependencies..."
