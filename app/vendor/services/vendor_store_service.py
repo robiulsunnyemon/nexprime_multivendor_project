@@ -52,7 +52,8 @@ async def create_store_service(
 
 async def get_my_store_service(vendor_id: int) -> dict:
     store = await prisma.store.find_unique(
-        where={"vendorId": vendor_id}
+        where={"vendorId": vendor_id},
+        include={"products": {"include": {"categories": True}}}
     )
     if not store:
         raise HTTPException(status_code=404, detail="Store not found for this vendor.")
