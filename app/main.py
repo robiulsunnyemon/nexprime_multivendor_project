@@ -24,6 +24,7 @@ from app.admin.routers.admin_dashboard_router import router as admin_dashboard_r
 from app.admin.routers.admin_system_setting_router import router as admin_system_setting_router
 from app.user.routers.wallet_router import router as wallet_router
 from app.report.routers import router as report_router
+from app.upload.routers import router as upload_router
 
 
 @asynccontextmanager
@@ -83,3 +84,4 @@ app.include_router(admin_dashboard_router)
 app.include_router(admin_system_setting_router)
 app.include_router(wallet_router)
 app.include_router(report_router)
+app.include_router(upload_router)
