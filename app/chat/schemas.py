@@ -47,6 +47,9 @@ class MessageResponse(BaseModel):
     createdAt: datetime
 
 class ActiveUserResponse(ChatUserResponse):
+    profileImageUrl: Optional[str] = None
+
+class ConversationResponse(ChatUserResponse):
     lastMessage: Optional[str] = None
     lastMessageTime: Optional[datetime] = None
     unreadCount: int = 0

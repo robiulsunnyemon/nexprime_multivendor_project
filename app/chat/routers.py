@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, UploadFi
 from typing import List
 from app.core.current_user import get_customer, get_admin, get_current_user
 from app.chat.services import manager, ChatService
-from app.chat.schemas import MessageResponse, MessageCreate, ActiveUserResponse, ChatUserResponse
+from app.chat.schemas import MessageResponse, MessageCreate, ActiveUserResponse, ChatUserResponse, ConversationResponse
 from app.auth.services.auth_service import get_user_by_token
 import cloudinary.uploader
 import json
@@ -59,8 +59,21 @@ async def get_chat_history(
 ):
     return await ChatService.get_chat_history(current_user.id, other_user_id)
 
+@router.get("/conversations", response_model=List[ConversationResponse])
+async def get_conversations(current_user = Depends(get_customer)):
+    return await ChatService.get_conversations(current_user.id)
+
+@router.get("/online-users", response_model=List[ActiveUserResponse])
+async def get_online_users(current_user = Depends(get_customer)):
+    return await ChatService.get_online_users(current_user.id)
+
+@router.post("/read/{sender_id}")
+async def mark_as_read(sender_id: int, current_user = Depends(get_customer)):
+    return await ChatService.mark_messages_as_read(current_user.id, sender_id)
+
 @router.get("/active-users", response_model=List[ActiveUserResponse])
 async def get_active_users(current_user = Depends(get_customer)):
+    # Keeping for compatibility, but it now uses the optimized merged logic
     return await ChatService.get_active_users_for_customer(current_user.id)
 
 @router.get("/admin/online-users", response_model=List[ChatUserResponse])

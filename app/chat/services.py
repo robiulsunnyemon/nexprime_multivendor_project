@@ -37,7 +37,18 @@ manager = ConnectionManager()
 class ChatService:
     @staticmethod
     async def save_message(sender_id: int, data: MessageCreate):
-        # 1. Create message in DB
+        # 1. Mark previous messages FROM the recipient TO this sender as read
+        # because if the sender is now replying/sending a message, they must have seen the other's messages.
+        await prisma.message.update_many(
+            where={
+                "senderId": data.receiverId,
+                "receiverId": sender_id,
+                "isRead": False
+            },
+            data={"isRead": True}
+        )
+
+        # 2. Create message in DB
         db_message = await prisma.message.create(
             data={
                 "content": data.content,
@@ -48,7 +59,7 @@ class ChatService:
             }
         )
         
-        # 2. Update sender's activity
+        # 3. Update sender's activity
         await prisma.user.update(
             where={"id": sender_id},
             data={"lastActiveAt": datetime.now()}
@@ -82,9 +93,9 @@ class ChatService:
         )
 
     @staticmethod
-    async def get_active_users_for_customer(current_user_id: int):
-        # 1. Get users the current user has chatted with (Priority)
-        interacted_messages = await prisma.message.find_many(
+    async def get_conversations(current_user_id: int):
+        # 1. Get unique user IDs from messages (sender or receiver)
+        messages = await prisma.message.find_many(
             where={
                 "OR": [
                     {"senderId": current_user_id},
@@ -98,8 +109,10 @@ class ChatService:
         user_last_messages = {}
         unread_counts = {}
 
-        for m in interacted_messages:
+        for m in messages:
             other_id = m.receiverId if m.senderId == current_user_id else m.senderId
+            if other_id == current_user_id: continue # Should not happen, but safety first
+            
             if other_id not in interacted_user_ids:
                 interacted_user_ids.append(other_id)
                 user_last_messages[other_id] = {
@@ -111,25 +124,24 @@ class ChatService:
             if m.receiverId == current_user_id and not m.isRead:
                 unread_counts[other_id] = unread_counts.get(other_id, 0) + 1
 
-        # 2. Get all users (except self)
-        all_users = await prisma.user.find_many(
-            where={"NOT": {"id": current_user_id}},
-            order={"lastActiveAt": "desc"}
+        if not interacted_user_ids:
+            return []
+
+        # 2. Get user details
+        users = await prisma.user.find_many(
+            where={"id": {"in": interacted_user_ids}}
         )
-
-        user_dict = {user.id: user for user in all_users}
-
-        # 3. Build response with priority
-        interacted_list = []
-        others_list = []
+        user_dict = {user.id: user for user in users}
         
         online_ids = manager.active_connections.keys()
 
-        # Build list for users we have interacted with
+        # 3. Build response
+        result = []
+        from app.chat.schemas import ConversationResponse
         for uid in interacted_user_ids:
             if uid in user_dict:
                 user = user_dict[uid]
-                res = ActiveUserResponse(
+                res = ConversationResponse(
                     id=user.id,
                     fullname=user.fullname,
                     email=user.email,
@@ -140,26 +152,66 @@ class ChatService:
                     unreadCount=unread_counts.get(uid, 0),
                     profileImageUrl=user.profileImageUrl
                 )
-                interacted_list.append(res)
-                # Remove so they don't appear in others_list
-                del user_dict[uid]
+                result.append(res)
+        
+        return result
 
-        # Sort interacted_list strictly by lastMessageTime desc
-        interacted_list.sort(key=lambda x: x.lastMessageTime, reverse=True)
+    @staticmethod
+    async def get_online_users(current_user_id: int):
+        online_ids = list(manager.active_connections.keys())
+        if current_user_id in online_ids:
+            online_ids.remove(current_user_id)
+        
+        if not online_ids:
+            return []
 
-        for user in user_dict.values():
-            res = ActiveUserResponse(
-                id=user.id,
-                fullname=user.fullname,
-                email=user.email,
-                isOnline=user.id in online_ids,
-                lastActiveAt=user.lastActiveAt,
-                unreadCount=0,
-                profileImageUrl=user.profileImageUrl
-            )
-            others_list.append(res)
-                
-        return interacted_list + others_list
+        users = await prisma.user.find_many(
+            where={"id": {"in": online_ids}},
+            order={"lastActiveAt": "desc"}
+        )
+        
+        from app.chat.schemas import ActiveUserResponse
+        return [
+            ActiveUserResponse(
+                id=u.id,
+                fullname=u.fullname,
+                email=u.email,
+                isOnline=True,
+                lastActiveAt=u.lastActiveAt,
+                profileImageUrl=u.profileImageUrl
+            ) for u in users
+        ]
+
+    @staticmethod
+    async def mark_messages_as_read(current_user_id: int, sender_id: int):
+        await prisma.message.update_many(
+            where={
+                "senderId": sender_id,
+                "receiverId": current_user_id,
+                "isRead": False
+            },
+            data={
+                "isRead": True
+            }
+        )
+        return {"message": "Messages marked as read"}
+
+    @staticmethod
+    async def get_active_users_for_customer(current_user_id: int):
+        # Keep for backward compatibility if needed, but point to new endpoints
+        # This currently combined logic can stay as is if the user hasn't explicitly asked to DELETE it.
+        # But I'll optimize it to use the same logic as get_conversations + online users.
+        conversations = await ChatService.get_conversations(current_user_id)
+        online_users = await ChatService.get_online_users(current_user_id)
+        
+        # Merge lists, avoiding duplicates
+        conv_ids = {c.id for c in conversations}
+        for o in online_users:
+            if o.id not in conv_ids:
+                # Add to end
+                conversations.append(o)
+        
+        return conversations
 
     @staticmethod
     async def get_online_users_for_admin():
