@@ -38,23 +38,20 @@ class LiveStreamService:
         room_name = f"room_{stream.id}"
         participant_identity = f"host_{streamer_id}"
 
-        # Initialize the token instance
-        token = api.AccessToken(api_key, api_secret)
-        token.identity = participant_identity
-        token.name = f"Streamer {streamer_id}"
-        
-        # Grant permissions for the streamer
-        grant = api.VideoGrants(
-            room_join=True,
-            room=room_name,
-            can_publish=True,
-            can_subscribe=True,
-            can_publish_data=True
+        # Generate Host Token using fluent API (livekit-api >= 1.1.0)
+        jwt_token = (
+            api.AccessToken(api_key, api_secret)
+            .with_identity(participant_identity)
+            .with_name(f"Streamer {streamer_id}")
+            .with_grants(api.VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=True,
+                can_subscribe=True,
+                can_publish_data=True,
+            ))
+            .to_jwt()
         )
-        token.grants = grant
-        
-        # Generate token string (12 hours valid)
-        jwt_token = token.to_jwt()
 
         return {"token": jwt_token, "stream": stream}
 
@@ -121,20 +118,19 @@ class LiveStreamService:
         room_name = f"room_{stream.id}"
         participant_identity = f"viewer_{user_id}"
 
-        token = api.AccessToken(api_key, api_secret)
-        token.identity = participant_identity
-        token.name = f"Viewer {user_id}"
-
-        # Viewers can only subscribe, not publish
-        grant = api.VideoGrants(
-            room_join=True,
-            room=room_name,
-            can_publish=False,
-            can_subscribe=True,
+        # Generate Viewer Token using fluent API (livekit-api >= 1.1.0)
+        jwt_token = (
+            api.AccessToken(api_key, api_secret)
+            .with_identity(participant_identity)
+            .with_name(f"Viewer {user_id}")
+            .with_grants(api.VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=False,
+                can_subscribe=True,
+            ))
+            .to_jwt()
         )
-        token.grants = grant
-        
-        jwt_token = token.to_jwt()
 
         return {"token": jwt_token, "stream": stream}
 
