@@ -76,7 +76,7 @@ class LiveStreamService:
         }
 
     @staticmethod
-    async def get_followed_active_streams(user_id: int):
+    async def get_followed_active_streams(user_id: int, skip: int = 0, limit: int = 20):
         # 1. Get followed store vendor IDs
         user = await prisma.user.find_unique(
             where={"id": user_id},
@@ -87,16 +87,46 @@ class LiveStreamService:
         
         vendor_ids = [store.vendorId for store in user.followedStores]
         
-        # 2. Get active streams from these vendors
+        # 2. Get active streams from these vendors with store details
         streams = await prisma.livestream.find_many(
             where={
                 "isActive": True,
                 "streamerId": {"in": vendor_ids}
             },
-            order={"createdAt": "desc"}
+            include={
+                "streamer": {
+                    "include": {
+                        "store": True
+                    }
+                }
+            },
+            order={"createdAt": "desc"},
+            skip=skip,
+            take=limit
         )
         
-        return streams
+        formatted_streams = []
+        for s in streams:
+            store = s.streamer.store
+            formatted_streams.append({
+                "id": s.id,
+                "title": s.title,
+                "thumbnail": s.thumbnail,
+                "offer": s.offer,
+                "endDateTime": s.endDateTime,
+                "isActive": s.isActive,
+                "viewsCount": s.viewsCount,
+                "streamerId": s.streamerId,
+                "vendorName": s.streamer.fullname,
+                "storeName": store.name if store else "Unknown Store",
+                "createdAt": s.createdAt,
+                "updatedAt": s.updatedAt,
+            })
+        
+        return {
+            "totalActiveStreams": len(formatted_streams),
+            "streams": formatted_streams
+        }
 
     @staticmethod
     async def join_stream(stream_id: int, user_id: int, is_host: bool = False):

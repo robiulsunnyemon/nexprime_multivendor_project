@@ -1,7 +1,13 @@
 from fastapi import APIRouter, Depends, status
 from typing import List
 from app.core.current_user import get_current_user
-from app.live.schemas import LiveStreamCreate, LiveStreamResponse, LiveTokenResponse, ActiveStreamsListResponse
+from app.live.schemas import (
+    LiveStreamCreate, 
+    LiveStreamResponse, 
+    LiveTokenResponse, 
+    ActiveStreamsListResponse,
+    FollowedStreamsListResponse
+)
 from app.live.services import LiveStreamService
 
 router = APIRouter(prefix="/live-streams", tags=["Live Streaming"])
@@ -30,7 +36,7 @@ async def get_active_streams():
     """
     return await LiveStreamService.get_active_streams()
 
-@router.get("/followed", response_model=List[LiveStreamResponse])
+@router.get("/followed", response_model=FollowedStreamsListResponse)
 async def get_followed_streams(current_user=Depends(get_current_user)):
     """
     Get active live streams from stores the user follows.
