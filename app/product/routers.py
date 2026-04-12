@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status, HTTPException, Query
-from typing import List, Optional, Any
+from typing import List, Optional, Any, Annotated
 import json
 from app.core.current_user import get_vendor
 from app.product.services import ProductService
@@ -21,7 +21,7 @@ async def create_product(
     shippingResponsibility: ShippingResponsibility = Form(ShippingResponsibility.CUSTOMER),
     shippingCharge: float = Form(...),
     category_ids: str = Form(...), # JSON string of IDs e.g. "[1, 2]"
-    images: List[UploadFile] = File(...),
+    images: Annotated[List[UploadFile], File(..., description="Select one or more product images")] = None,
     current_vendor=Depends(get_vendor)
 ):
     # Get vendor's store
@@ -73,7 +73,15 @@ async def create_product(
     # Filter images to ensure we only have actual files
     valid_images = []
     if images:
-        valid_images = [img for img in images if isinstance(img, UploadFile) and img.filename]
+        # Wrap in list if it's a single file (FastAPI usually does this but defensive check)
+        image_list = images if isinstance(images, list) else [images]
+        for img in image_list:
+            # Check if it has a filename and is not just a placeholder
+            if hasattr(img, "filename") and img.filename:
+                valid_images.append(img)
+            # Support case where it might be a dictionary-like object or other (more flexible)
+            elif isinstance(img, dict) and img.get("filename"):
+                valid_images.append(img)
 
     if not valid_images:
         raise HTTPException(status_code=400, detail="At least one product image is required")
@@ -140,7 +148,7 @@ async def update_product(
     shippingResponsibility: Optional[ShippingResponsibility] = Form(None),
     shippingCharge: Optional[float] = Form(None),
     category_ids: Optional[str] = Form(None), 
-    images: Optional[List[Any]] = File(None),
+    images: Annotated[Optional[List[UploadFile]], File(description="Select product images to add")] = None,
     current_vendor=Depends(get_vendor)
 ):
     store = await prisma.store.find_unique(where={"vendorId": current_vendor.id})
@@ -189,7 +197,12 @@ async def update_product(
     # Filter images to ensure we only have actual files (bypass empty strings from Swagger/Client)
     valid_images = []
     if images:
-        valid_images = [img for img in images if isinstance(img, UploadFile) and img.filename]
+        image_list = images if isinstance(images, list) else [images]
+        for img in image_list:
+            if hasattr(img, "filename") and img.filename:
+                valid_images.append(img)
+            elif isinstance(img, dict) and img.get("filename"):
+                valid_images.append(img)
 
     return await ProductService.update_product(
         product_id=product_id,
