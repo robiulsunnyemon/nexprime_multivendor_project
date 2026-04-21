@@ -43,6 +43,7 @@ class CreatorSimpleResponse(BaseModel):
     id: int
     fullname: str
     email: str
+    profileImageUrl:str
     phonenumber: str
 
     class Config:
