@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status, HTTPException, Query
-from typing import List, Optional, Any, Annotated
+from typing import List, Optional, Any, Annotated, Union
 import json
 from app.core.current_user import get_vendor
 from app.product.services import ProductService
@@ -21,7 +21,7 @@ async def create_product(
     shippingResponsibility: ShippingResponsibility = Form(ShippingResponsibility.CUSTOMER),
     shippingCharge: float = Form(...),
     category_ids: str = Form(...), # JSON string of IDs e.g. "[1, 2]"
-    images: Annotated[List[UploadFile], File(..., description="Select one or more product images")] = None,
+    images: Annotated[Optional[List[Union[UploadFile, str]]], File(description="Select one or more product images")] = None,
     current_vendor=Depends(get_vendor)
 ):
     # Get vendor's store
@@ -148,7 +148,7 @@ async def update_product(
     shippingResponsibility: Optional[ShippingResponsibility] = Form(None),
     shippingCharge: Optional[float] = Form(None),
     category_ids: Optional[str] = Form(None), 
-    images: Annotated[Optional[List[UploadFile]], File(description="Select product images to add")] = None,
+    images: Annotated[Optional[List[Union[UploadFile, str]]], File(description="Select one or more product images")] = None,
     current_vendor=Depends(get_vendor)
 ):
     store = await prisma.store.find_unique(where={"vendorId": current_vendor.id})
