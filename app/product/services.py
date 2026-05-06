@@ -257,3 +257,32 @@ class ProductService:
         return await prisma.searchhistory.delete_many(
             where={"userId": user_id}
         )
+    @staticmethod
+    async def update_product_images(
+        product_id: int,
+        store_id: int,
+        image_files: List[UploadFile],
+        is_deleted: bool
+    ):
+        product = await prisma.product.find_unique(where={"id": product_id})
+        if not product:
+            raise HTTPException(status_code=404, detail="Product not found")
+        if product.storeId != store_id:
+            raise HTTPException(status_code=403, detail="Not authorized to update this product")
+            
+        new_image_urls = []
+        for file in image_files:
+            url = await upload_image_helper(file, folder="nexprime_products")
+            new_image_urls.append(url)
+            
+        if is_deleted:
+            final_images = new_image_urls
+        else:
+            # Combine existing images with new ones
+            final_images = product.images + new_image_urls
+            
+        return await prisma.product.update(
+            where={"id": product_id},
+            data={"images": final_images},
+            include={"categories": True}
+        )

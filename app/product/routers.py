@@ -211,3 +211,25 @@ async def update_product(
         category_ids=cat_ids,
         image_files=valid_images if valid_images else None
     )
+@router.post("/vendor/products/{product_id}/images", response_model=ProductResponse, summary="Update product images (Vendor only)")
+async def update_product_images(
+    product_id: int,
+    images: List[UploadFile] = File(...),
+    isDeleted: bool = Form(False, description="If true, old images will be replaced. If false, new images will be appended."),
+    current_vendor=Depends(get_vendor)
+):
+    """
+    Update product images.
+    - If **isDeleted** is **true**, all existing images for the product will be replaced by the new ones.
+    - If **isDeleted** is **false**, the new images will be added to the existing list.
+    """
+    store = await prisma.store.find_unique(where={"vendorId": current_vendor.id})
+    if not store:
+        raise HTTPException(status_code=400, detail="Vendor store not found")
+        
+    return await ProductService.update_product_images(
+        product_id=product_id,
+        store_id=store.id,
+        image_files=images,
+        is_deleted=isDeleted
+    )
