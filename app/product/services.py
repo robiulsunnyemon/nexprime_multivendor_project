@@ -113,7 +113,8 @@ class ProductService:
         store_id: int,
         product_data: dict,
         category_ids: Optional[List[int]] = None,
-        image_files: Optional[List[UploadFile]] = None
+        image_files: Optional[List[UploadFile]] = None,
+        is_deleted: bool = False
     ):
         product = await prisma.product.find_unique(where={"id": product_id})
         if not product:
@@ -172,7 +173,11 @@ class ProductService:
             for file in image_files:
                 url = await upload_image_helper(file, folder="nexprime_products")
                 new_image_urls.append(url)
-            update_payload["images"] = product.images + new_image_urls
+            
+            if is_deleted:
+                update_payload["images"] = new_image_urls
+            else:
+                update_payload["images"] = product.images + new_image_urls
 
         if category_ids is not None:
             update_payload["categories"] = {
@@ -184,6 +189,7 @@ class ProductService:
             data=update_payload,
             include={"categories": True}
         )
+
 
     @staticmethod
     async def get_products_filtered(

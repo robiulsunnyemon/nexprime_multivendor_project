@@ -149,6 +149,7 @@ async def update_product(
     shippingCharge: Optional[float] = Form(None),
     category_ids: Optional[str] = Form(None), 
     images: Annotated[Optional[List[Union[UploadFile, str]]], File(description="Select one or more product images")] = None,
+    isDeleted: bool = Form(True, description="If true, old images will be replaced when new images are uploaded."),
     current_vendor=Depends(get_vendor)
 ):
     store = await prisma.store.find_unique(where={"vendorId": current_vendor.id})
@@ -209,8 +210,10 @@ async def update_product(
         store_id=store.id,
         product_data=update_dict,
         category_ids=cat_ids,
-        image_files=valid_images if valid_images else None
+        image_files=valid_images if valid_images else None,
+        is_deleted=isDeleted
     )
+
 @router.post("/vendor/products/{product_id}/images", response_model=ProductResponse, summary="Update product images (Vendor only)")
 async def update_product_images(
     product_id: int,
