@@ -334,6 +334,7 @@ async def login_service(email: str, password: str) -> dict:
             "is_verified": user.is_verified,
             "residentcard_frontside": user.residentcard_frontside,
             "residentcard_backside": user.residentcard_backside,
+            "location": user.location,
         },
     }
 
@@ -393,6 +394,7 @@ async def get_profile_service(user) -> dict:
         "is_verified": user.is_verified,
         "residentcard_frontside": user.residentcard_frontside,
         "residentcard_backside": user.residentcard_backside,
+        "location": user.location,
         "createdAt": user.createdAt,
     }
 

@@ -84,6 +84,7 @@ class UserOut(BaseModel):
     is_verified: bool
     residentcard_frontside: str
     residentcard_backside: str
+    location: Optional[str] = None
 
     class Config:
         from_attributes = True

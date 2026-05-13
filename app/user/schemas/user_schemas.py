@@ -26,6 +26,7 @@ class UserResponse(BaseModel):
     residentcard_frontside: str
     residentcard_backside: str
     is_verified: bool
+    location: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
 
@@ -67,6 +68,7 @@ class VendorSchema(BaseModel):
     coverImageUrl: Optional[str]
     residentcard_frontside: str
     residentcard_backside: str
+    location: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
     store: Optional[StoreSchema] = None
@@ -88,3 +90,4 @@ class UserProfileUpdate(BaseModel):
     password: Optional[str] = None
     profileImageUrl: Optional[str] = None
     coverImageUrl: Optional[str] = None
+    location: Optional[str] = None
