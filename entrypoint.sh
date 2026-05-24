@@ -16,7 +16,7 @@ prisma generate
 
 # Push database schema
 #echo "Syncing database schema..."
-#prisma db push --accept-data-loss
+prisma db push --accept-data-loss
 
 # Run seed script
 #echo "Seeding initial data..."
