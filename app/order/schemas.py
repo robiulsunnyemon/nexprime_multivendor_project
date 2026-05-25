@@ -90,6 +90,96 @@ class SubOrderResponse(BaseModel):
 
     class Config:
         from_attributes = True
+## vendor
+##___________________start___________________
+
+# --- ১. কাস্টমার/ইউজারের জন্য অ্যাডমিন স্কিমা ---
+class UserMinResponseForAdmin(BaseModel):
+    id: int
+    fullname: str
+    email: str
+    phonenumber: str
+    is_verified: bool
+    profileImageUrl: Optional[str] = None
+    residentcard_frontside: Optional[str] = None # অ্যাডমিন রেসিডেন্ট কার্ড দেখতে পারবে
+    residentcard_backside: Optional[str] = None
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- ২. ডেলিভারি অ্যাড্রেসের জন্য অ্যাডমিন স্কিমা ---
+class DeliveryAddressResponseForAdmin(BaseModel):
+    id: int
+    userId: int
+    fullName: str
+    postcode: str
+    fullAddress: str
+    buildingNameRoomNumber: Optional[str] = None
+    phoneNumber: str
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- ৩. অর্ডারের জন্য অ্যাডমিন স্কিমা ---
+class OrderMinResponseForAdmin(BaseModel):
+    id: int
+    totalAmount: float
+    isPaid: bool
+    status: OrderStatus
+    userId: int
+    createdAt: datetime
+    updatedAt: datetime
+    
+    # অ্যাডমিন ভার্সনের ভেতরের অ্যাড্রেস এবং ইউজার মডেলেও ForAdmin স্কিমা ব্যবহার করা হয়েছে
+    deliveryAddress: Optional[DeliveryAddressResponseForAdmin] = None 
+    user: Optional[UserMinResponseForAdmin] = None 
+
+    class Config:
+        from_attributes = True
+
+class SubOrderResponseForAdmin(BaseModel):
+    id: int
+    orderId: int
+    storeId: int
+    subTotal: float
+    commissionAmount: float
+    vendorEarnings: float
+    isFulfield: bool
+    isComplete: bool
+    isArchive: bool
+    trackingNumber: Optional[str] = None
+    courierName: Optional[str] = None
+    trackingUrl: Optional[str] = None
+    orderItems: List[OrderItemResponse] = []
+    
+    # 🌟 এখানে অ্যাডমিন অর্ডার স্কিমাটি লিঙ্ক করা হয়েছে
+    order: Optional[OrderMinResponseForAdmin] = None 
+    
+    createdAt: datetime
+    updatedAt: datetime
+
+    @model_validator(mode="after")
+    def generate_tracking_url(self) -> "SubOrderResponse":
+        if self.trackingNumber:
+            self.trackingUrl = (
+                f"https://trackings.post.japanpost.jp/services/srv/search/"
+                f"direct?reqCodeNo1={self.trackingNumber}"
+            )
+        return self
+
+    class Config:
+        from_attributes = True
+
+
+
+
+        #_______________end__________________
 
 # --- Setting Schemas ---
 

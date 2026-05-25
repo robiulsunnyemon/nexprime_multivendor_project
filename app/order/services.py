@@ -420,9 +420,28 @@ class OrderService:
             include={"orderItems": True}
         )
 
+    # @staticmethod
+    # async def get_vendor_suborders(vendor_id: int):
+    #     """শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো ভেন্ডরকে দেখানো হবে।"""
+    #     return await prisma.suborder.find_many(
+    #         where={
+    #             "store": {
+    #                 "vendorId": vendor_id
+    #             },
+    #             "order": {
+    #                 "isPaid": True
+    #             }
+    #         },
+    #         include={
+    #             "orderItems": {"include": {"product": True}},
+    #             "order": {"include": {"deliveryAddress": True}}
+    #         },
+    #         order={"createdAt": "desc"}
+    #     )
+##___________________start___________________
     @staticmethod
     async def get_vendor_suborders(vendor_id: int):
-        """শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো ভেন্ডরকে দেখানো হবে।"""
+        """শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো ভেন্ডরকে দেখানো হবে (ডেলিভারি অ্যাড্রেস ও কাস্টমার ইনফো সহ)"""
         return await prisma.suborder.find_many(
             where={
                 "store": {
@@ -434,11 +453,17 @@ class OrderService:
             },
             include={
                 "orderItems": {"include": {"product": True}},
-                "order": {"include": {"deliveryAddress": True}}
+                "order": {
+                    "include": {
+                        "deliveryAddress": True,
+                        "user": True # 🌟 এই লাইনটি যুক্ত করা হয়েছে কাস্টমারের তথ্য ডেটাবেজ থেকে তুলে আনার জন্য
+                    }
+                }
             },
             order={"createdAt": "desc"}
         )
 
+    ##___________________end___________________
 class SettingService:
     @staticmethod
     async def get_commission_setting():

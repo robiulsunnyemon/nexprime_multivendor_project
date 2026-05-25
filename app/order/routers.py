@@ -6,7 +6,7 @@ from app.order.schemas import (
     DeliveryAddressCreate, DeliveryAddressResponse,
     OrderCreate, OrderResponse, RatingCreate, SubOrderResponse,
     PlatformCommissionResponse, PlatformCommissionUpdate,
-    RatingWithUserResponse, SubOrderFulfillRequest
+    RatingWithUserResponse, SubOrderFulfillRequest,SubOrderResponseForAdmin
 )
 
 router = APIRouter(prefix="/orders", tags=["Order & Rating Management"])
@@ -124,7 +124,13 @@ async def update_suborder_archive(
         vendor_id=current_vendor.id
     )
 
-@router.get("/vendor/me", response_model=List[SubOrderResponse])
+# @router.get("/vendor/me", response_model=List[SubOrderResponse])
+# async def get_vendor_suborders(current_vendor = Depends(get_vendor)):
+#     return await OrderService.get_vendor_suborders(vendor_id=current_vendor.id)
+
+
+
+@router.get("/vendor/me", response_model=List[SubOrderResponseForAdmin])
 async def get_vendor_suborders(current_vendor = Depends(get_vendor)):
     return await OrderService.get_vendor_suborders(vendor_id=current_vendor.id)
 
