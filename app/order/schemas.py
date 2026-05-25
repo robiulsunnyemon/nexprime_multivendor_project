@@ -3,7 +3,6 @@ from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
-
 class OrderStatus(str, Enum):
     PENDING = "PENDING"
     SHIPPED = "SHIPPED"
@@ -92,6 +91,25 @@ class SubOrderResponse(BaseModel):
         from_attributes = True
 ## vendor
 ##___________________start___________________
+# --- প্রয়োজনীয় এনামসমূহ (Prisma স্কিমা অনুযায়ী) ---
+class OrderStatus(str, Enum):
+    PENDING = "PENDING"
+    SHIPPED = "SHIPPED"
+    DELIVERED = "DELIVERED"
+
+class ProductSize(str, Enum):
+    XS = "XS"
+    S = "S"
+    M = "M"
+    L = "L"
+    XL = "XL"
+    XXL = "XXL"
+    XXXL = "XXXL"
+    FREE_SIZE = "FREE_SIZE"
+
+class ShippingResponsibility(str, Enum):
+    CUSTOMER = "CUSTOMER"
+    VENDOR = "VENDOR"
 
 # --- ১. কাস্টমার/ইউজারের জন্য অ্যাডমিন স্কিমা ---
 class UserMinResponseForAdmin(BaseModel):
@@ -101,7 +119,7 @@ class UserMinResponseForAdmin(BaseModel):
     phonenumber: str
     is_verified: bool
     profileImageUrl: Optional[str] = None
-    residentcard_frontside: Optional[str] = None # অ্যাডমিন রেসিডেন্ট কার্ড দেখতে পারবে
+    residentcard_frontside: Optional[str] = None 
     residentcard_backside: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
@@ -135,14 +153,56 @@ class OrderMinResponseForAdmin(BaseModel):
     userId: int
     createdAt: datetime
     updatedAt: datetime
-    
-    # অ্যাডমিন ভার্সনের ভেতরের অ্যাড্রেস এবং ইউজার মডেলেও ForAdmin স্কিমা ব্যবহার করা হয়েছে
     deliveryAddress: Optional[DeliveryAddressResponseForAdmin] = None 
     user: Optional[UserMinResponseForAdmin] = None 
 
     class Config:
         from_attributes = True
 
+
+# --- ৪. প্রোডাক্টের বিস্তারিত তথ্যের জন্য স্কিমা (নতুন) ---
+class ProductDetailResponseForAdmin(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    basePrice: float
+    stockUnits: int
+    size: List[ProductSize]
+    colors: List[str]
+    isDiscountSale: bool
+    salePrice: Optional[float] = None
+    discountPercentage: Optional[float] = None
+    shippingResponsibility: ShippingResponsibility
+    shippingCharge: float
+    total_payable_amount: float
+    images: List[str]
+    averageRating: float
+    totalRatings: int
+    storeId: int
+    createdAt: datetime
+    updatedAt: datetime
+
+    class Config:
+        from_attributes = True
+
+
+# --- ৫. অর্ডার আইটেমের জন্য অ্যাডমিন স্কিমা (নতুন) ---
+class OrderItemResponseForAdmin(BaseModel):
+    id: int
+    subOrderId: int
+    productId: int
+    quantity: int
+    price: float
+    createdAt: datetime
+    updatedAt: datetime
+    # 🌟 এখানে প্রোডাক্টের সব ডিটেইলস ইনক্লুড করা হয়েছে
+    product: Optional[ProductDetailResponseForAdmin] = None 
+
+    class Config:
+        from_attributes = True
+
+
+# --- ৬. ফাইনাল সাব-অর্ডার অ্যাডমিন স্কিমা ---
 class SubOrderResponseForAdmin(BaseModel):
     id: int
     orderId: int
@@ -156,16 +216,15 @@ class SubOrderResponseForAdmin(BaseModel):
     trackingNumber: Optional[str] = None
     courierName: Optional[str] = None
     trackingUrl: Optional[str] = None
-    orderItems: List[OrderItemResponse] = []
-    
-    # 🌟 এখানে অ্যাডমিন অর্ডার স্কিমাটি লিঙ্ক করা হয়েছে
-    order: Optional[OrderMinResponseForAdmin] = None 
-    
     createdAt: datetime
     updatedAt: datetime
+    
+    # 🌟 আপডেট করা হয়েছে: সাধারণ OrderItemResponse এর বদলে অ্যাডমিন ভার্সন ব্যবহার করা হয়েছে
+    orderItems: List[OrderItemResponseForAdmin] = []
+    order: Optional[OrderMinResponseForAdmin] = None 
 
     @model_validator(mode="after")
-    def generate_tracking_url(self) -> "SubOrderResponse":
+    def generate_tracking_url(self) -> "SubOrderResponseForAdmin":
         if self.trackingNumber:
             self.trackingUrl = (
                 f"https://trackings.post.japanpost.jp/services/srv/search/"
@@ -175,8 +234,6 @@ class SubOrderResponseForAdmin(BaseModel):
 
     class Config:
         from_attributes = True
-
-
 
 
         #_______________end__________________

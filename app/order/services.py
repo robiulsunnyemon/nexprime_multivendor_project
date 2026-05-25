@@ -439,9 +439,37 @@ class OrderService:
     #         order={"createdAt": "desc"}
     #     )
 ##___________________start___________________
+    # @staticmethod
+    # async def get_vendor_suborders(vendor_id: int):
+    #     """শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো ভেন্ডরকে দেখানো হবে (ডেলিভারি অ্যাড্রেস ও কাস্টমার ইনফো সহ)"""
+    #     return await prisma.suborder.find_many(
+    #         where={
+    #             "store": {
+    #                 "vendorId": vendor_id
+    #             },
+    #             "order": {
+    #                 "isPaid": True
+    #             }
+    #         },
+    #         include={
+    #             "orderItems": {"include": {"product": True}},
+    #             "order": {
+    #                 "include": {
+    #                     "deliveryAddress": True,
+    #                     "user": True # 🌟 এই লাইনটি যুক্ত করা হয়েছে কাস্টমারের তথ্য ডেটাবেজ থেকে তুলে আনার জন্য
+    #                 }
+    #             }
+    #         },
+    #         order={"createdAt": "desc"}
+    #     )
+
+
     @staticmethod
     async def get_vendor_suborders(vendor_id: int):
-        """শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো ভেন্ডরকে দেখানো হবে (ডেলিভারি অ্যাড্রেস ও কাস্টমার ইনফো সহ)"""
+        """
+        শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো নির্দিষ্ট ভেন্ডরকে দেখানো হবে।
+        এর সাথে কাস্টমার ইনফো, ডেলিভারি অ্যাড্রেস এবং প্রোডাক্টের সম্পূর্ণ ডিটেইলস থাকবে।
+        """
         return await prisma.suborder.find_many(
             where={
                 "store": {
@@ -452,16 +480,24 @@ class OrderService:
                 }
             },
             include={
-                "orderItems": {"include": {"product": True}},
+                # প্রতিটি সাব-অর্ডারের আইটেম এবং প্রোডাক্টের সব ডিটেইলস নিয়ে আসবে
+                "orderItems": {
+                    "include": {
+                        "product": True
+                    }
+                },
+                # মেইন অর্ডার, ডেলিভারি অ্যাড্রেস এবং কাস্টমার (user) ডাটা নিয়ে আসবে
                 "order": {
                     "include": {
                         "deliveryAddress": True,
-                        "user": True # 🌟 এই লাইনটি যুক্ত করা হয়েছে কাস্টমারের তথ্য ডেটাবেজ থেকে তুলে আনার জন্য
+                        "user": True 
                     }
                 }
             },
             order={"createdAt": "desc"}
         )
+
+
 
     ##___________________end___________________
 class SettingService:
