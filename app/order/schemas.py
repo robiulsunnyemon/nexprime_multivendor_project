@@ -48,7 +48,7 @@ class ProductMinResponse(BaseModel):
 class OrderItemResponse(OrderItemBase):
     id: int
     subOrderId: int
-    product: ProductMinResponse 
+    product: Optional[ProductMinResponse] = None
     createdAt: datetime
     updatedAt: datetime
 
