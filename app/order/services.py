@@ -287,6 +287,20 @@ class OrderService:
         if not sub_order or sub_order.store.vendorId != vendor_id:
             raise HTTPException(status_code=403, detail="You do not own this sub-order.")
 
+        # একবার ফুলফিল হলে আনফুলফিল করা যাবে না
+        if sub_order.isFulfield and not is_fulfield:
+            raise HTTPException(
+                status_code=400,
+                detail="A shipped sub-order cannot be un-fulfilled. The courier is already on the way."
+            )
+
+        # ফুলফিল করতে হলে ট্র্যাকিং নম্বর দেওয়া আবশ্যক
+        if is_fulfield and not tracking_number.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="A tracking number is required to mark this sub-order as fulfilled (shipped)."
+            )
+
         # অর্ডারটি পেইড কিনা চেক করা
         parent_order = await prisma.order.find_unique(where={"id": sub_order.orderId})
         if not parent_order or not parent_order.isPaid:
@@ -327,6 +341,13 @@ class OrderService:
             raise HTTPException(
                 status_code=400,
                 detail="Cannot complete a sub-order that has not been paid yet."
+            )
+
+        # ট্র্যাকিং নম্বর ও কুরিয়ার নাম ছাড়া কমপ্লিট করা যাবে না
+        if not sub_order.trackingNumber or not sub_order.courierName:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot complete this sub-order. A tracking number and courier name must be set first (mark as fulfilled with tracking info)."
             )
 
         # ডাবল ক্রেডিট প্রতিরোধ — ইতিমধ্যে কমপ্লিট হলে আর পরিবর্তন করা যাবে না
