@@ -37,9 +37,18 @@ class OrderItemBase(BaseModel):
     quantity: int
     price: float
 
+class ProductMinResponse(BaseModel):
+    id: int
+    name: str
+    images: List[str]  
+
+    class Config:
+        from_attributes = True
+
 class OrderItemResponse(OrderItemBase):
     id: int
     subOrderId: int
+    product: ProductMinResponse 
     createdAt: datetime
     updatedAt: datetime
 
