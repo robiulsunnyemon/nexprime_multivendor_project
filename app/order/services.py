@@ -272,7 +272,14 @@ class OrderService:
         )
 
     @staticmethod
-    async def update_suborder_fulfillment(suborder_id: int, is_fulfield: bool, vendor_id: int):
+    async def update_suborder_fulfillment(
+        suborder_id: int,
+        is_fulfield: bool,
+        vendor_id: int,
+        tracking_number: str = "",
+        courier_name: str = "Japan Post"
+    ):
+        """ভেন্ডর শিপমেন্ট করেছেন কিনা আপডেট করে এবং Japan Post ট্র্যাকিং নম্বর সংরক্ষণ করে।"""
         sub_order = await prisma.suborder.find_unique(
             where={"id": suborder_id},
             include={"store": True}
@@ -280,19 +287,33 @@ class OrderService:
         if not sub_order or sub_order.store.vendorId != vendor_id:
             raise HTTPException(status_code=403, detail="You do not own this sub-order.")
 
+        # অর্ডারটি পেইড কিনা চেক করা
+        parent_order = await prisma.order.find_unique(where={"id": sub_order.orderId})
+        if not parent_order or not parent_order.isPaid:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot fulfill a sub-order that has not been paid yet."
+            )
+
+        update_data: dict = {"isFulfield": is_fulfield}
+        if is_fulfield and tracking_number:
+            update_data["trackingNumber"] = tracking_number
+            update_data["courierName"] = courier_name
+
         updated_suborder = await prisma.suborder.update(
             where={"id": suborder_id},
-            data={"isFulfield": is_fulfield},
+            data=update_data,
             include={"orderItems": True}
         )
-        
-        # Trigger status derivation
+
+        # মেইন অর্ডারের স্ট্যাটাস আপডেট
         await OrderService._update_order_status(sub_order.orderId)
-        
+
         return updated_suborder
 
     @staticmethod
     async def update_suborder_completion(suborder_id: int, is_complete: bool, vendor_id: int):
+        """সাব-অর্ডার সম্পূর্ণ করে এবং ভেন্ডরের ওয়ালেটে আয় ক্রেডিট করে।"""
         sub_order = await prisma.suborder.find_unique(
             where={"id": suborder_id},
             include={"store": True}
@@ -300,15 +321,67 @@ class OrderService:
         if not sub_order or sub_order.store.vendorId != vendor_id:
             raise HTTPException(status_code=403, detail="You do not own this sub-order.")
 
-        updated_suborder = await prisma.suborder.update(
-            where={"id": suborder_id},
-            data={"isComplete": is_complete},
-            include={"orderItems": True}
-        )
-        
-        # Trigger status derivation
+        # অর্ডারটি পেইড কিনা চেক
+        parent_order = await prisma.order.find_unique(where={"id": sub_order.orderId})
+        if not parent_order or not parent_order.isPaid:
+            raise HTTPException(
+                status_code=400,
+                detail="Cannot complete a sub-order that has not been paid yet."
+            )
+
+        # ডাবল ক্রেডিট প্রতিরোধ — ইতিমধ্যে কমপ্লিট হলে আর পরিবর্তন করা যাবে না
+        if sub_order.isComplete:
+            raise HTTPException(
+                status_code=400,
+                detail="This sub-order is already completed and cannot be modified."
+            )
+
+        async with prisma.tx() as tx:
+            # কমপ্লিট করার সময় isFulfield ও True করে দেওয়া হচ্ছে consistency-র জন্য
+            updated_suborder = await tx.suborder.update(
+                where={"id": suborder_id},
+                data={
+                    "isComplete": is_complete,
+                    "isFulfield": True,  # সম্পূর্ণ হলে অবশ্যই শিপড হয়েছিল
+                },
+                include={"orderItems": True}
+            )
+
+            # ভেন্ডরের ওয়ালেটে আয় ক্রেডিট করা
+            if is_complete and sub_order.vendorEarnings > 0:
+                # ভেন্ডর ইউজার আইডি বের করা
+                vendor_user = await tx.store.find_unique(
+                    where={"id": sub_order.storeId}
+                )
+                if vendor_user:
+                    # ওয়ালেট আছে কিনা চেক, না থাকলে তৈরি করা
+                    wallet = await tx.wallet.find_unique(
+                        where={"userId": vendor_user.vendorId}
+                    )
+                    if not wallet:
+                        await tx.wallet.create(
+                            data={"userId": vendor_user.vendorId, "balance": 0.0}
+                        )
+
+                    # ভেন্ডরের আয় ওয়ালেটে যোগ করা
+                    await tx.wallet.update(
+                        where={"userId": vendor_user.vendorId},
+                        data={"balance": {"increment": sub_order.vendorEarnings}}
+                    )
+
+                    # ট্রানজেকশন রেকর্ড তৈরি করা
+                    await tx.wallettransaction.create(
+                        data={
+                            "userId": vendor_user.vendorId,
+                            "amount": sub_order.vendorEarnings,
+                            "type": "TOPUP",
+                            "description": f"Order #{sub_order.orderId} সম্পন্ন হওয়ায় আয় ক্রেডিট।"
+                        }
+                    )
+
+        # মেইন অর্ডারের স্ট্যাটাস আপডেট
         await OrderService._update_order_status(sub_order.orderId)
-        
+
         return updated_suborder
 
     @staticmethod
@@ -328,10 +401,14 @@ class OrderService:
 
     @staticmethod
     async def get_vendor_suborders(vendor_id: int):
+        """শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো ভেন্ডরকে দেখানো হবে।"""
         return await prisma.suborder.find_many(
             where={
                 "store": {
                     "vendorId": vendor_id
+                },
+                "order": {
+                    "isPaid": True
                 }
             },
             include={

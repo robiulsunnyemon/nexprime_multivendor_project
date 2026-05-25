@@ -265,6 +265,8 @@ model SubOrder {
   isFulfield       Boolean     @default(false)
   isComplete       Boolean     @default(false)
   isArchive        Boolean     @default(false)
+  trackingNumber   String?
+  courierName      String?     @default("Japan Post")
   orderItems       OrderItem[]
   createdAt        DateTime    @default(now())
   updatedAt        DateTime    @updatedAt

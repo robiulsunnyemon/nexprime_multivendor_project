@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+
 
 class OrderStatus(str, Enum):
     PENDING = "PENDING"
@@ -47,6 +48,10 @@ class OrderItemResponse(OrderItemBase):
 
 # --- SubOrder Schemas ---
 
+class SubOrderFulfillRequest(BaseModel):
+    trackingNumber: str
+    courierName: Optional[str] = "Japan Post"
+
 class SubOrderResponse(BaseModel):
     id: int
     orderId: int
@@ -57,9 +62,22 @@ class SubOrderResponse(BaseModel):
     isFulfield: bool
     isComplete: bool
     isArchive: bool
+    trackingNumber: Optional[str] = None
+    courierName: Optional[str] = None
+    trackingUrl: Optional[str] = None
     orderItems: List[OrderItemResponse] = []
     createdAt: datetime
     updatedAt: datetime
+
+    @model_validator(mode="after")
+    def generate_tracking_url(self) -> "SubOrderResponse":
+        """ট্র্যাকিং নম্বর থাকলে জাপান পোস্টের ডাইরেক্ট ট্র্যাকিং URL তৈরি করে।"""
+        if self.trackingNumber:
+            self.trackingUrl = (
+                f"https://trackings.post.japanpost.jp/services/srv/search/"
+                f"direct?reqCodeNo1={self.trackingNumber}"
+            )
+        return self
 
     class Config:
         from_attributes = True

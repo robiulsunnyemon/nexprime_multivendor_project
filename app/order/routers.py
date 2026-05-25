@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, status, HTTPException, Request
 from typing import List, Optional
-from app.core.current_user import get_customer, get_admin,get_vendor
+from app.core.current_user import get_customer, get_admin, get_vendor
 from app.order.services import OrderService, SettingService, PaymentService
 from app.order.schemas import (
     DeliveryAddressCreate, DeliveryAddressResponse,
-    OrderCreate, OrderResponse, RatingCreate,SubOrderResponse,
+    OrderCreate, OrderResponse, RatingCreate, SubOrderResponse,
     PlatformCommissionResponse, PlatformCommissionUpdate,
-    RatingWithUserResponse
+    RatingWithUserResponse, SubOrderFulfillRequest
 )
 
 router = APIRouter(prefix="/orders", tags=["Order & Rating Management"])
@@ -85,13 +85,19 @@ async def update_commission_setting(
 @router.patch("/sub-order/{suborder_id}/fulfill", response_model=SubOrderResponse)
 async def update_suborder_fulfillment(
     suborder_id: int,
-    is_fulfield: bool,
+    fulfill_data: SubOrderFulfillRequest,
     current_vendor = Depends(get_vendor)
 ):
+    """
+    ভেন্ডর সাব-অর্ডার শিপ করে Japan Post ট্র্যাকিং নম্বর সেট করেন।
+    পেইড নয় এমন অর্ডারের সাব-অর্ডার ফুলফিল করা যাবে না।
+    """
     return await OrderService.update_suborder_fulfillment(
-        suborder_id=suborder_id, 
-        is_fulfield=is_fulfield, 
-        vendor_id=current_vendor.id
+        suborder_id=suborder_id,
+        is_fulfield=True,
+        vendor_id=current_vendor.id,
+        tracking_number=fulfill_data.trackingNumber,
+        courier_name=fulfill_data.courierName or "Japan Post"
     )
 
 @router.patch("/sub-order/{suborder_id}/complete", response_model=SubOrderResponse)
