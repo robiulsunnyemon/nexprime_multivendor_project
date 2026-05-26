@@ -286,6 +286,14 @@ async def verify_otp_service(email: str, code: str) -> dict:
                 "is_kyc_pending": True
             }
 
+    # Maintenance mode check
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if setting and setting.isMaintenanceModeEnabled and user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="System is currently under maintenance. Only administrators are allowed access."
+        )
+
     token = _create_access_token(user.id, user.role)
     refresh_token = await _create_refresh_token(user.id)
     return {"access_token": token, "refresh_token": refresh_token, "token_type": "bearer"}
@@ -317,6 +325,14 @@ async def login_service(email: str, password: str) -> dict:
     }
     if user.status in status_errors:
         raise HTTPException(status_code=403, detail=status_errors[user.status])
+
+    # Maintenance mode check
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if setting and setting.isMaintenanceModeEnabled and user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="System is currently under maintenance. Only administrators are allowed access."
+        )
 
     token = _create_access_token(user.id, user.role)
     refresh_token = await _create_refresh_token(user.id)
@@ -418,6 +434,14 @@ async def refresh_token_service(refresh_token: str) -> dict:
     user = await prisma.user.find_unique(where={"id": user_id})
     if not user:
         raise HTTPException(status_code=404, detail="User not found.")
+
+    # Maintenance mode check
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if setting and setting.isMaintenanceModeEnabled and user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="System is currently under maintenance. Only administrators are allowed access."
+        )
 
     # Token Rotation: Delete old refresh token and create a new one
     await prisma.refreshtoken.delete(where={"id": stored_token.id})

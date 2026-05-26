@@ -139,6 +139,7 @@ model SystemSetting {
   id                    Int     @id @default(1)
   isRegistrationEnabled Boolean @default(true)
   isLiveStreamingEnabled Boolean @default(true)
+  isMaintenanceModeEnabled Boolean @default(false)
 }
 
 

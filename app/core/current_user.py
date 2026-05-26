@@ -25,6 +25,14 @@ async def get_current_user(
     if not user:
         raise HTTPException(status_code=401, detail="User not found.")
 
+    # Maintenance mode check
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if setting and setting.isMaintenanceModeEnabled and user.role != "ADMIN":
+        raise HTTPException(
+            status_code=503,
+            detail="System is currently under maintenance. Only administrators are allowed access."
+        )
+
     return user
 
 
@@ -61,4 +69,8 @@ async def get_optional_current_user(
         return None
 
     user = await prisma.user.find_unique(where={"id": user_id})
+    if user:
+        setting = await prisma.systemsetting.find_unique(where={"id": 1})
+        if setting and setting.isMaintenanceModeEnabled and user.role != "ADMIN":
+            return None
     return user

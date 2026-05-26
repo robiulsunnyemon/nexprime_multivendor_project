@@ -9,6 +9,10 @@ router = APIRouter(prefix="/admin/system-settings", tags=["Admin - System Settin
 class SystemSettingUpdate(BaseModel):
     isRegistrationEnabled: Optional[bool] = None
     isLiveStreamingEnabled: Optional[bool] = None
+    isMaintenanceModeEnabled: Optional[bool] = None
+
+class MaintenanceModeToggle(BaseModel):
+    isMaintenanceModeEnabled: bool
 
 @router.get("", summary="Get global system settings")
 async def get_system_settings():
@@ -18,7 +22,8 @@ async def get_system_settings():
         return {
             "id": 1, 
             "isRegistrationEnabled": True, 
-            "isLiveStreamingEnabled": True
+            "isLiveStreamingEnabled": True,
+            "isMaintenanceModeEnabled": False
         }
     return setting
 
@@ -32,6 +37,8 @@ async def update_system_settings(
         update_data["isRegistrationEnabled"] = body.isRegistrationEnabled
     if body.isLiveStreamingEnabled is not None:
         update_data["isLiveStreamingEnabled"] = body.isLiveStreamingEnabled
+    if body.isMaintenanceModeEnabled is not None:
+        update_data["isMaintenanceModeEnabled"] = body.isMaintenanceModeEnabled
 
     setting = await prisma.systemsetting.find_unique(where={"id": 1})
     if not setting:
@@ -39,7 +46,8 @@ async def update_system_settings(
             data={
                 "id": 1,
                 "isRegistrationEnabled": body.isRegistrationEnabled if body.isRegistrationEnabled is not None else True,
-                "isLiveStreamingEnabled": body.isLiveStreamingEnabled if body.isLiveStreamingEnabled is not None else True
+                "isLiveStreamingEnabled": body.isLiveStreamingEnabled if body.isLiveStreamingEnabled is not None else True,
+                "isMaintenanceModeEnabled": body.isMaintenanceModeEnabled if body.isMaintenanceModeEnabled is not None else False
             }
         )
     else:
@@ -49,5 +57,29 @@ async def update_system_settings(
         )
     return {
         "message": "System settings updated successfully.",
+        "settings": setting
+    }
+
+@router.post("/maintenance", summary="Toggle maintenance mode (Admin only)")
+async def toggle_maintenance_mode(
+    body: MaintenanceModeToggle,
+    admin=Depends(get_admin)
+):
+    setting = await prisma.systemsetting.find_unique(where={"id": 1})
+    if not setting:
+        setting = await prisma.systemsetting.create(
+            data={
+                "id": 1,
+                "isMaintenanceModeEnabled": body.isMaintenanceModeEnabled
+            }
+        )
+    else:
+        setting = await prisma.systemsetting.update(
+            where={"id": 1},
+            data={"isMaintenanceModeEnabled": body.isMaintenanceModeEnabled}
+        )
+    status_str = "enabled" if body.isMaintenanceModeEnabled else "disabled"
+    return {
+        "message": f"Maintenance mode has been {status_str} successfully.",
         "settings": setting
     }
