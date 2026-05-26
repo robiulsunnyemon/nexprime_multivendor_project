@@ -292,3 +292,35 @@ class ProductService:
             data={"images": final_images},
             include={"categories": True}
         )
+
+
+##----top discount products
+
+    @staticmethod
+    async def get_highest_discount_product():
+        """
+        Prisma find_first ব্যবহার করে সবচেয়ে বেশি discountPercentage থাকা ১ম প্রোডাক্টটি রিটার্ন করে।
+        """
+        product = await prisma.product.find_first(
+            where={
+                "isDiscountSale": True,
+                "discountPercentage": {
+                    "gt": 0.0
+                }
+            },
+            order={
+                "discountPercentage": "desc"  # সর্বোচ্চ ডিস্কাউন্টটি সবার আগে আসবে
+            },
+            include={
+                "categories": True, 
+                "store": True
+            }
+        )
+        
+        if not product:
+            raise HTTPException(
+                status_code=404, 
+                detail="No discounted products found"
+            )
+            
+        return product

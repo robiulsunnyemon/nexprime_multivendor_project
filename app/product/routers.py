@@ -118,6 +118,19 @@ async def filter_products(
         color=color
     )
 
+
+##-----top discount product
+
+@router.get("/products/highest-discount", response_model=ProductResponse, summary="Get the single product with the highest discount")
+async def get_highest_discount_product():
+    """
+    সবচেয়ে বেশি ডিস্কাউন্ট থাকা শীর্ষ ১ম প্রোডাক্টটি ফেচ করার এন্ডপয়েন্ট।
+    """
+    return await ProductService.get_highest_discount_product()
+
+##-----end top discount product    
+
+
 @router.get("/products/{product_id}", response_model=ProductResponse, summary="Get product details")
 async def get_product(product_id: int):
     return await ProductService.get_product_by_id(product_id)
