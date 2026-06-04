@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status, HTTPException, Request
+from fastapi import APIRouter, Depends, status, HTTPException, Request,Header
 from typing import List, Optional
 from app.core.current_user import get_customer, get_admin, get_vendor
 from app.order.services import OrderService, SettingService, PaymentService
@@ -143,8 +143,15 @@ async def create_payment_intent(
 ):
     return await PaymentService.create_payment_intent(order_id=order_id, user_id=current_customer.id)
 
+
 @router.post("/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, stripe_signature: Optional[str] = Header(None)):
+    if not stripe_signature:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing stripe-signature header"
+        )
+
     payload = await request.body()
-    sig_header = request.headers.get("stripe-signature")
-    return await PaymentService.handle_webhook(payload, sig_header)
+
+    return await PaymentService.handle_webhook(payload, stripe_signature)
