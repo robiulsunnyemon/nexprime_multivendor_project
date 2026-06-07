@@ -12,6 +12,8 @@ from fastapi import HTTPException, UploadFile, status
 
 from app.core.config import settings
 from app.database.db import prisma
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 
 
 # ─────────────────────────────────────────────────────────
@@ -56,27 +58,60 @@ async def _create_refresh_token(user_id: int) -> str:
     )
     return token
 
+#
+# async def _send_otp_email(email: str, code: str, subject: str = "OTP Verification") -> None:
+#     body = (
+#         f"Your OTP code is: {code}\n\n"
+#         f"Use this code within {settings.OTP_EXPIRE_MINUTES} minutes.\n\n"
+#         f"If you did not request this, please ignore this email."
+#     )
+#     msg = MIMEText(body, "plain", "utf-8")
+#     msg["Subject"] = subject
+#     msg["From"] = settings.EMAIL_FROM
+#     msg["To"] = email
+#
+#     try:
+#         with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
+#             server.login(settings.SMTP_USER, settings.SMTP_PASS)
+#             server.sendmail(settings.EMAIL_FROM, [email], msg.as_string())
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to send email: {str(e)}",
+#         )
 
-async def _send_otp_email(email: str, code: str, subject: str = "OTP Verification") -> None:
+
+async def _send_otp_sendgrid_email(email: str, code: str, subject: str = "OTP Verification") -> None:
     body = (
         f"Your OTP code is: {code}\n\n"
         f"Use this code within {settings.OTP_EXPIRE_MINUTES} minutes.\n\n"
         f"If you did not request this, please ignore this email."
     )
-    msg = MIMEText(body, "plain", "utf-8")
-    msg["Subject"] = subject
-    msg["From"] = settings.EMAIL_FROM
-    msg["To"] = email
+
+
+    message = Mail(
+        from_email=settings.SENDGRID_EMAIL_FROM,
+        to_emails=email,
+        subject=subject,
+        plain_text_content=body
+    )
 
     try:
-        with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT) as server:
-            server.login(settings.SMTP_USER, settings.SMTP_PASS)
-            server.sendmail(settings.EMAIL_FROM, [email], msg.as_string())
+
+        sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
+        response = sg.send(message)
+
+
+        if response.status_code not in [200, 201, 202]:
+            raise Exception(f"SendGrid returned status code {response.status_code}")
+
     except Exception as e:
+        print(str(e))
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send email: {str(e)}",
+            detail=f"Failed to send email via SendGrid: {str(e)}",
         )
+
 
 
 async def _upload_image(file: UploadFile, folder: str = "resident_cards") -> str:
@@ -171,7 +206,7 @@ async def signup_service(
     # Create & send OTP
     code = await _create_otp(user.id)
 
-    await _send_otp_email(email, code, subject="Account Verification OTP")
+    await _send_otp_sendgrid_email(email, code, subject="Account Verification OTP")
     return {"message": "Signup successful. OTP sent to your email.", "user_id": user.id}
 
 
@@ -253,7 +288,7 @@ async def vendor_signup_service(
 
     # 5. Create & send OTP
     code = await _create_otp(user.id)
-    await _send_otp_email(email, code, subject="Vendor Account Verification OTP")
+    await _send_otp_sendgrid_email(email, code, subject="Vendor Account Verification OTP")
 
     return {
         "message": "Vendor signup successful. OTP sent to your email.",
@@ -365,7 +400,7 @@ async def resend_otp_service(email: str) -> dict:
 
     code = await _create_otp(user.id)
 
-    await _send_otp_email(email, code, subject="Resend OTP")
+    await _send_otp_sendgrid_email(email, code, subject="Resend OTP")
     return {"message": "A new OTP has been sent."}
 
 
@@ -377,7 +412,7 @@ async def forgot_password_service(email: str) -> dict:
 
     code = await _create_otp(user.id)
 
-    await _send_otp_email(email, code, subject="Password Reset OTP")
+    await _send_otp_sendgrid_email(email, code, subject="Password Reset OTP")
     return {"message": "Password reset OTP sent."}
 
 
