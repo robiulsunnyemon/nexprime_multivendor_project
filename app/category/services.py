@@ -76,6 +76,13 @@ class CategoryService:
 
     @staticmethod
     async def create_subcategory(name: str, main_category_id: int, image_file: Optional[UploadFile] = None):
+        sub_cat = await prisma.subcategory.find_first(where={"name": name})
+        if sub_cat:
+            if sub_cat.mainCategoryId == main_category_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Subcategory already exists"
+                )
         image_url = None
         if image_file:
             image_url = await upload_image_helper(image_file, folder="nexprime_categories")

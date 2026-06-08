@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, File, Form, UploadFile, status, HTTPException, Query
+from fastapi.responses import JSONResponse
 from typing import List, Optional, Any, Annotated, Union
 import json
-from app.core.current_user import get_vendor
+from app.core.current_user import get_vendor, get_current_user
 from app.product.services import ProductService
 from app.product.schemas import ProductCreate, ProductResponse, ShippingResponsibility, ProductSize
 from app.database.db import prisma
@@ -121,12 +122,33 @@ async def filter_products(
 
 ##-----top discount product
 
-@router.get("/products/highest-discount", response_model=ProductResponse, summary="Get the single product with the highest discount")
-async def get_highest_discount_product():
+@router.get(
+    "/products/highest-discount",
+    response_model=ProductResponse,
+    responses={
+        202: {"description": "Product already fetched by the user", "content": {"application/json": {"example": {"message": "You have already fetched the highest discount product."}}}}
+    },
+    summary="Get the single product with the highest discount"
+)
+async def get_highest_discount_product(current_user=Depends(get_current_user)):
     """
-    সবচেয়ে বেশি ডিস্কাউন্ট থাকা শীর্ষ ১ম প্রোডাক্টটি ফেচ করার এন্ডপয়েন্ট।
+    সবচেয়ে বেশি ডিস্কাউন্ট থাকা শীর্ষ ১ম প্রোডাক্টটি ফেচ করার এন্ডপয়েন্ট (ইউজার জীবনে একবারই ফেচ করতে পারবেন)।
     """
-    return await ProductService.get_highest_discount_product()
+    if current_user.hasFetchedHighestDiscount:
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content={"message": "You have already fetched the highest discount product."}
+        )
+
+    product = await ProductService.get_highest_discount_product()
+
+    # Mark as fetched for this user
+    await prisma.user.update(
+        where={"id": current_user.id},
+        data={"hasFetchedHighestDiscount": True}
+    )
+
+    return product
 
 ##-----end top discount product    
 

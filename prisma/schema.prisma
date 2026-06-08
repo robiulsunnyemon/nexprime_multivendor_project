@@ -70,6 +70,7 @@ model User {
   reportsMade            MarketingProductReport[] @relation("ReporterReports")
   reportsReceived        MarketingProductReport[] @relation("TargetReports")
   location               String?
+  hasFetchedHighestDiscount Boolean @default(false)
 }
 
 
