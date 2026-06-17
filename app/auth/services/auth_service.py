@@ -1,8 +1,7 @@
 import random
 import string
-import smtplib
 from datetime import datetime, timedelta
-from email.mime.text import MIMEText
+from sendgrid.helpers.mail import Mail, HtmlContent, PlainTextContent
 
 import bcrypt
 import cloudinary
@@ -82,37 +81,88 @@ async def _create_refresh_token(user_id: int) -> str:
 
 
 async def _send_otp_sendgrid_email(email: str, code: str, subject: str = "OTP Verification") -> None:
-    body = (
-        f"Your OTP code is: {code}\n\n"
-        f"Use this code within {settings.OTP_EXPIRE_MINUTES} minutes.\n\n"
-        f"If you did not request this, please ignore this email."
-    )
+    # স্প্যাম ফিল্টার এড়াতে প্লেইন টেক্সটও রাখা ভালো (Fallback হিসেবে)
+    plain_body = f"Your OTP code is {code}. It is valid for {settings.OTP_EXPIRE_MINUTES} minutes."
 
+    # একটি সুন্দর ও প্রফেশনাল HTML টেমপ্লেট
+    html_body = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>{subject}</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; color: #333333;">
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color: #f4f6f9; padding: 20px 0;">
+            <tr>
+                <td align="center">
+                    <table role="presentation" width="100%" max-width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 1px solid #e1e8ed;">
+                        <!-- Header -->
+                        <tr>
+                            <td style="background-color: #4F46E5; padding: 30px; text-align: center;">
+                                <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px;">Security Verification</h1>
+                            </td>
+                        </tr>
+                        <!-- Body -->
+                        <tr>
+                            <td style="padding: 40px 30px;">
+                                <p style="font-size: 16px; line-height: 1.6; color: #4B5563; margin-0;">Hello,</p>
+                                <p style="font-size: 16px; line-height: 1.6; color: #4B5563; margin-top: 10px;">You are receiving this email to verify your identity. Please use the following One-Time Password (OTP) to complete your action:</p>
 
+                                <!-- OTP Box -->
+                                <div style="text-align: center; margin: 30px 0;">
+                                    <div style="display: inline-block; background-color: #F3F4F6; border: 2px dashed #4F46E5; color: #4F46E5; font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px 40px; border-radius: 6px;">
+                                        {code}
+                                    </div>
+                                </div>
+
+                                <p style="font-size: 14px; color: #6B7280; text-align: center; margin-bottom: 25px;">
+                                    This code is confidential and valid for <strong>{settings.OTP_EXPIRE_MINUTES} minutes</strong>. Do not share it with anyone.
+                                </p>
+
+                                <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 25px 0;">
+
+                                <p style="font-size: 13px; line-height: 1.5; color: #9CA3AF; margin: 0;">
+                                    If you did not request this verification, please safely ignore this email or contact support if you have concerns.
+                                </p>
+                            </td>
+                        </tr>
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB;">
+                                &copy; {2026} Your Company Name. All rights reserved.
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+
+    # SendGrid Mail অবজেক্ট তৈরি (Plain Text এবং HTML দুটিই দেওয়া হলো)
     message = Mail(
         from_email=settings.SENDGRID_EMAIL_FROM,
         to_emails=email,
         subject=subject,
-        plain_text_content=body
+        plain_text_content=PlainTextContent(plain_body),
+        html_content=HtmlContent(html_body)
     )
 
     try:
-
         sg = SendGridAPIClient(settings.SENDGRID_API_KEY)
         response = sg.send(message)
-
 
         if response.status_code not in [200, 201, 202]:
             raise Exception(f"SendGrid returned status code {response.status_code}")
 
     except Exception as e:
-        print(str(e))
+        print(f"SendGrid Error: {str(e)}")  # উন্নত লগিং
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send email via SendGrid: {str(e)}",
+            detail="Failed to send verification email.",
         )
-
-
 
 async def _upload_image(file: UploadFile, folder: str = "resident_cards") -> str:
     contents = await file.read()
