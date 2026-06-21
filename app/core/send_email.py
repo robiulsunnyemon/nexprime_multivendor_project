@@ -98,7 +98,7 @@ def send_email(email: str, action: str):
                         <tr>
                             <td style="background-color: #F3F4F6; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB;">
                                 This is an automated security notification. Please do not reply directly to this email.<br>
-                                &copy; {2026} Your Company Name. All rights reserved.
+                                &copy; {2026} Nexprime. All rights reserved.
                             </td>
                         </tr>
                     </table>

@@ -130,7 +130,7 @@ async def _send_otp_sendgrid_email(email: str, code: str, subject: str = "OTP Ve
                         <!-- Footer -->
                         <tr>
                             <td style="background-color: #F9FAFB; padding: 20px; text-align: center; font-size: 12px; color: #9CA3AF; border-top: 1px solid #E5E7EB;">
-                                &copy; {2026} Your Company Name. All rights reserved.
+                                &copy; {2026} Nexprime. All rights reserved.
                             </td>
                         </tr>
                     </table>
