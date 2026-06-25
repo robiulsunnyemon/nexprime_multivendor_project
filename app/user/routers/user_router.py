@@ -102,3 +102,20 @@ async def update_kyc_status(
     admin=Depends(get_admin),
 ):
     return await UserService.update_kyc_status_service(vendor_id=vendor_id,background_tasks=background_tasks, status=body.status)
+
+
+@vendor_router.patch("/{vendor_id}/account_status", response_model=UserResponse)
+async def update_vendor_status(
+    vendor_id: int,
+    background_tasks: BackgroundTasks,
+    data: StatusUpdate,
+    admin=Depends(get_admin)
+):
+    """
+    Update vendor account status. Restricted to Admin.
+    Status: ACTIVE, SUSPEND, INACTIVE
+    """
+    try:
+        return await UserService.update_user_status(vendor_id, background_tasks, data.status)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

@@ -27,9 +27,7 @@ class UserService:
         background_tasks.add_task(
             send_email,
             db_user.email,
-            settings.EMAIL_FROM,
-            status,
-            settings.SMTP_PASS
+            status
         )
         return await prisma.user.update(
             where={"id": user_id},
@@ -93,9 +91,7 @@ class UserService:
             background_tasks.add_task(
                 send_email,
                 db_vendor.email,
-                settings.EMAIL_FROM,
-                status,
-                settings.SMTP_PASS
+                status
             )
             await prisma.user.delete(where={"id": vendor_id})
             return {"message": f"KYC file status updated to {status}."}
