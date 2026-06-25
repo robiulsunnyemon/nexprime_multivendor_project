@@ -24,10 +24,18 @@ class LiveStreamService:
                 detail="Live streaming is currently disabled by the administrator."
             )
 
+        data_dict = data.model_dump()
+        
+        # If thumbnail is not provided, default to user's profile image url
+        if not data_dict.get("thumbnail"):
+            user = await prisma.user.find_unique(where={"id": streamer_id})
+            data_dict["thumbnail"] = (user.profileImageUrl if user and user.profileImageUrl 
+                                      else "https://res.cloudinary.com/dzmls119c/image/upload/v1/default_avatar.png")
+
         # 1. Create entry in DB
         stream = await prisma.livestream.create(
             data={
-                **data.model_dump(),
+                **data_dict,
                 "streamerId": streamer_id,
                 "isActive": True
             }

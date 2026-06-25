@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 class LiveStreamCreate(BaseModel):
-    thumbnail: str
+    thumbnail: Optional[str] = None
     title: str
     offer: Optional[str] = None
 
