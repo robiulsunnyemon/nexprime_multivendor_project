@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, UploadFile, status, Query
+from typing import Optional
+from datetime import date
 from app.core.current_user import get_vendor
 from app.vendor.services.vendor_store_service import (
     create_store_service,
@@ -81,5 +83,15 @@ async def update_my_store(
     )
 
 @router.get("/dashboard/stats", response_model=VendorStatsResponse, summary="Get vendor dashboard statistics")
-async def get_vendor_stats(current_vendor=Depends(get_vendor)):
-    return await get_vendor_stats_service(vendor_id=current_vendor.id)
+async def get_vendor_stats(
+    filter_type: str = Query("last_7_days", description="today, yesterday, last_7_days, last_30_days, this_month, last_1_year, custom"),
+    start_date: Optional[date] = Query(None, description="Start date for custom filter (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="End date for custom filter (YYYY-MM-DD)"),
+    current_vendor=Depends(get_vendor)
+):
+    return await get_vendor_stats_service(
+        vendor_id=current_vendor.id,
+        filter_type=filter_type,
+        start_date=start_date,
+        end_date=end_date
+    )

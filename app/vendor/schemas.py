@@ -8,7 +8,8 @@ class DailyEarning(BaseModel):
 class VendorStatsResponse(BaseModel):
     storeName: str
     totalEarnings: float
-    last7DaysEarnings: List[DailyEarning]
+    earningsOverTime: List[DailyEarning]
     totalPendingOrders: int
     totalProducts: int
     totalFollowers: int
+    filterType: str
