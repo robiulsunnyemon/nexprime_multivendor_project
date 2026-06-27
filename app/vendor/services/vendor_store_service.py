@@ -115,7 +115,7 @@ async def get_vendor_stats_service(
         raise HTTPException(status_code=404, detail="Store not found for this vendor.")
     
     # 2. Determine start and end datetime based on filter (UTC)
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    now = datetime.now(timezone.utc)
     
     if filter_type == "today":
         start_datetime = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -139,9 +139,9 @@ async def get_vendor_stats_service(
     elif filter_type == "custom":
         if not start_date:
             raise HTTPException(status_code=400, detail="start_date is required for custom filter.")
-        start_datetime = datetime.combine(start_date, datetime.min.time())
+        start_datetime = datetime.combine(start_date, datetime.min.time(), tzinfo=timezone.utc)
         if end_date:
-            end_datetime = datetime.combine(end_date, datetime.max.time())
+            end_datetime = datetime.combine(end_date, datetime.max.time(), tzinfo=timezone.utc)
         else:
             end_datetime = now.replace(hour=23, minute=59, second=59, microsecond=999999)
     else:
@@ -199,11 +199,11 @@ async def get_vendor_stats_service(
                 target_month += 12
                 target_year -= 1
                 
-            month_start = datetime(target_year, target_month, 1)
+            month_start = datetime(target_year, target_month, 1, tzinfo=timezone.utc)
             if target_month == 12:
-                next_month_start = datetime(target_year + 1, 1, 1)
+                next_month_start = datetime(target_year + 1, 1, 1, tzinfo=timezone.utc)
             else:
-                next_month_start = datetime(target_year, target_month + 1, 1)
+                next_month_start = datetime(target_year, target_month + 1, 1, tzinfo=timezone.utc)
             month_end = next_month_start - timedelta(microseconds=1)
             
             # Boundary checks
