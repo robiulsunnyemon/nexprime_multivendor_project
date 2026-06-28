@@ -1,11 +1,13 @@
 from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
-from app.product.schemas import ProductResponse
+from app.product.schemas import ProductResponse, ProductSize
 
 class CartItemBase(BaseModel):
     productId: int
     quantity: int = 1
+    size: Optional[ProductSize] = None
+    color: Optional[str] = None
 
 class CartItemCreate(CartItemBase):
     pass
@@ -18,6 +20,8 @@ class CartItemResponse(BaseModel):
     userId: int
     productId: int
     quantity: int
+    size: Optional[ProductSize] = None
+    color: Optional[str] = None
     product: ProductResponse
     createdAt: datetime
     updatedAt: datetime

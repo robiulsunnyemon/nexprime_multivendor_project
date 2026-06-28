@@ -16,13 +16,33 @@ class CartService:
         if product.stockUnits < cart_data.quantity:
             raise HTTPException(status_code=400, detail=f"Insufficient stock. Available: {product.stockUnits}")
 
-        # 2. Check if item already in cart
-        existing_item = await prisma.cartitem.find_unique(
+        # Validate size if product has sizes defined
+        if product.size and len(product.size) > 0:
+            if not cart_data.size:
+                raise HTTPException(status_code=400, detail="Please select a size")
+            if cart_data.size not in product.size:
+                raise HTTPException(status_code=400, detail=f"Selected size {cart_data.size} is not available. Available: {product.size}")
+        else:
+            if cart_data.size:
+                raise HTTPException(status_code=400, detail="Size selection is not applicable for this product")
+
+        # Validate color if product has colors defined
+        if product.colors and len(product.colors) > 0:
+            if not cart_data.color:
+                raise HTTPException(status_code=400, detail="Please select a color")
+            if cart_data.color not in product.colors:
+                raise HTTPException(status_code=400, detail=f"Selected color {cart_data.color} is not available. Available: {product.colors}")
+        else:
+            if cart_data.color:
+                raise HTTPException(status_code=400, detail="Color selection is not applicable for this product")
+
+        # 2. Check if item already in cart with same size and color
+        existing_item = await prisma.cartitem.find_first(
             where={
-                "userId_productId": {
-                    "userId": user_id,
-                    "productId": cart_data.productId
-                }
+                "userId": user_id,
+                "productId": cart_data.productId,
+                "size": cart_data.size,
+                "color": cart_data.color
             }
         )
 
@@ -43,7 +63,9 @@ class CartService:
             data={
                 "userId": user_id,
                 "productId": cart_data.productId,
-                "quantity": cart_data.quantity
+                "quantity": cart_data.quantity,
+                "size": cart_data.size,
+                "color": cart_data.color
             },
             include={"product": {"include": {"categories": True, "store": True}}}
         )

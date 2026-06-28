@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
+from app.product.schemas import StoreSimpleResponse, ProductSize
 
 class OrderStatus(str, Enum):
     PENDING = "PENDING"
@@ -35,11 +36,15 @@ class OrderItemBase(BaseModel):
     productId: int
     quantity: int
     price: float
+    size: Optional[ProductSize] = None
+    color: Optional[str] = None
 
 class ProductMinResponse(BaseModel):
     id: int
     name: str
     images: List[str]  
+    storeId: int
+    store: Optional[StoreSimpleResponse] = None
 
     class Config:
         from_attributes = True
@@ -193,6 +198,8 @@ class OrderItemResponseForAdmin(BaseModel):
     productId: int
     quantity: int
     price: float
+    size: Optional[ProductSize] = None
+    color: Optional[str] = None
     createdAt: datetime
     updatedAt: datetime
     # 🌟 এখানে প্রোডাক্টের সব ডিটেইলস ইনক্লুড করা হয়েছে

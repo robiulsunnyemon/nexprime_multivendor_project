@@ -90,7 +90,9 @@ class OrderService:
                             "subOrderId": sub_order.id,
                             "productId": item.product.id,
                             "quantity": item.quantity,
-                            "price": float(price)
+                            "price": float(price),
+                            "size": item.size,
+                            "color": item.color
                         }
                     )
 

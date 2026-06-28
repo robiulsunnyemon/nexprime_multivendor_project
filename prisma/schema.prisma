@@ -275,15 +275,17 @@ model SubOrder {
 }
 
 model OrderItem {
-  id         Int      @id @default(autoincrement())
+  id         Int          @id @default(autoincrement())
   subOrderId Int
-  subOrder   SubOrder @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
+  subOrder   SubOrder     @relation(fields: [subOrderId], references: [id], onDelete: Cascade)
   productId  Int
-  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   quantity   Int
   price      Float
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  size       ProductSize?
+  color      String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 }
 
 model Rating {
@@ -379,16 +381,18 @@ model SearchHistory {
 }
 
 model CartItem {
-  id        Int      @id @default(autoincrement())
+  id        Int          @id @default(autoincrement())
   userId    Int
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   productId Int
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity  Int      @default(1)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int          @default(1)
+  size      ProductSize?
+  color     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
-  @@unique([userId, productId])
+  @@unique([userId, productId, size, color])
   @@index([userId])
 }
 
