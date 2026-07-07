@@ -46,9 +46,20 @@ async def create_product(
     if size:
         # If it's a list with one item that has commas, split it
         if len(size) == 1 and "," in size[0]:
-            parsed_sizes = [s.strip().upper() for s in size[0].split(",") if s.strip()]
+            temp_sizes = [s.strip().upper() for s in size[0].split(",") if s.strip()]
         else:
-            parsed_sizes = [s.strip().upper() for s in size if s.strip()]
+            temp_sizes = [s.strip().upper() for s in size if s.strip()]
+        
+        # Validate sizes against ProductSize enum
+        for s in temp_sizes:
+            try:
+                parsed_sizes.append(ProductSize(s))
+            except ValueError:
+                allowed_sizes = [e.value for e in ProductSize]
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid size '{s}'. Allowed sizes are: {', '.join(allowed_sizes)}"
+                )
 
     parsed_colors = []
     if colors:
@@ -198,11 +209,22 @@ async def update_product(
     if stockUnits is not None: update_dict["stockUnits"] = stockUnits
     
     if size is not None:
-        processed_size = []
+        temp_sizes = []
         if len(size) == 1 and "," in size[0]:
-            processed_size = [s.strip().upper() for s in size[0].split(",") if s.strip()]
+            temp_sizes = [s.strip().upper() for s in size[0].split(",") if s.strip()]
         else:
-            processed_size = [s.strip().upper() for s in size if s.strip()]
+            temp_sizes = [s.strip().upper() for s in size if s.strip()]
+        
+        processed_size = []
+        for s in temp_sizes:
+            try:
+                processed_size.append(ProductSize(s))
+            except ValueError:
+                allowed_sizes = [e.value for e in ProductSize]
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid size '{s}'. Allowed sizes are: {', '.join(allowed_sizes)}"
+                )
         
         if processed_size:
             update_dict["size"] = processed_size
