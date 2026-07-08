@@ -43,8 +43,8 @@ class CreatorSimpleResponse(BaseModel):
     id: int
     fullname: str
     email: str
-    profileImageUrl:str
-    phonenumber: str
+    profileImageUrl: Optional[str] = None
+    phonenumber: Optional[str] = None
 
     class Config:
         from_attributes = True
