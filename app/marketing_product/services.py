@@ -38,10 +38,12 @@ class MarketingProductService:
         )
 
     @staticmethod
-    async def get_all_marketing_products(goodsType: Optional[str] = None):
+    async def get_all_marketing_products(goodsType: Optional[str] = None, location: Optional[str] = None):
         where_clause = {}
         if goodsType:
             where_clause["goodsType"] = {"equals": goodsType, "mode": "insensitive"}
+        if location:
+            where_clause["location"] = {"contains": location, "mode": "insensitive"}
             
         return await prisma.marketingproduct.find_many(
             where=where_clause if where_clause else None,

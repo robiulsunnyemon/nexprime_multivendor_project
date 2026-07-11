@@ -71,8 +71,8 @@ async def create_marketing_product(
     )
 
 @router.get("", response_model=List[MarketingProductWithCreatorResponse], summary="Get all marketing products")
-async def get_all_marketing_products(goodsType: Optional[str] = None):
-    return await MarketingProductService.get_all_marketing_products(goodsType)
+async def get_all_marketing_products(goodsType: Optional[str] = None, location: Optional[str] = None):
+    return await MarketingProductService.get_all_marketing_products(goodsType, location)
 
 @router.get("/my", response_model=List[MarketingProductWithCreatorResponse], summary="Get my marketing products")
 async def get_my_marketing_products(current_user=Depends(get_current_user)):
