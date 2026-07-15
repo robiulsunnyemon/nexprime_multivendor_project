@@ -16,6 +16,7 @@ class MarketingProductBase(BaseModel):
     publishingFee: float = 0
     shippingResponsibility: ShippingResponsibility = ShippingResponsibility.CUSTOMER
     shippingCharge: float = 0
+    taxFee: float = 0.0
 
 class MarketingProductCreate(MarketingProductBase):
     pass
@@ -28,6 +29,7 @@ class MarketingProductUpdate(BaseModel):
     price: Optional[float] = None
     shippingResponsibility: Optional[ShippingResponsibility] = None
     shippingCharge: Optional[float] = None
+    taxFee: Optional[float] = None
 
 class MarketingProductResponse(MarketingProductBase):
     id: int

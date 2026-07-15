@@ -58,10 +58,17 @@ class OrderService:
 
         # 3. Create Order and SubOrders in a transaction
         async with prisma.tx() as tx:
+            overall_total_shipping_charge = sum(
+                (item.product.shippingCharge * item.quantity)
+                for store_items in items_by_store.values()
+                for item in store_items if item.product.shippingResponsibility == "CUSTOMER"
+            )
+
             # a. Create the main Order
             order = await tx.order.create(
                 data={
                     "totalAmount": cart["totalAmount"],
+                    "totalShippingCharge": float(overall_total_shipping_charge),
                     "userId": user_id,
                     "deliveryAddressId": order_data.deliveryAddressId,
                 }
@@ -73,12 +80,17 @@ class OrderService:
                     Decimal(str(item.product.total_payable_amount or 0)) * item.quantity 
                     for item in store_items
                 )
+                sub_shipping_charge = sum(
+                    (item.product.shippingCharge * item.quantity)
+                    for item in store_items if item.product.shippingResponsibility == "CUSTOMER"
+                )
                 
                 sub_order = await tx.suborder.create(
                     data={
                         "orderId": order.id,
                         "storeId": store_id,
-                        "subTotal": float(sub_total)
+                        "subTotal": float(sub_total),
+                        "totalShippingCharge": float(sub_shipping_charge)
                     }
                 )
 

@@ -203,6 +203,7 @@ model Product {
   shippingResponsibility ShippingResponsibility @default(CUSTOMER)
   shippingCharge         Float                  @default(0)
   total_payable_amount   Float                  @default(0)
+  taxFee                 Float                  @default(0.0)
   images                 String[] // List of image URLs
   averageRating          Float                  @default(0)
   totalRatings           Int                    @default(0)
@@ -243,6 +244,7 @@ enum OrderStatus {
 model Order {
   id                Int             @id @default(autoincrement())
   totalAmount       Float
+  totalShippingCharge Float       @default(0.0)
   isPaid            Boolean         @default(false)
   status            OrderStatus     @default(PENDING)
   deliveryAddressId Int
@@ -262,6 +264,7 @@ model SubOrder {
   storeId          Int
   store            Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
   subTotal         Float
+  totalShippingCharge Float       @default(0.0)
   commissionAmount Float       @default(0.0)
   vendorEarnings   Float       @default(0.0)
   isFulfield       Boolean     @default(false)
@@ -339,6 +342,7 @@ model MarketingProduct {
   publishingFee          Float                  @default(0)
   shippingResponsibility ShippingResponsibility @default(CUSTOMER)
   shippingCharge         Float                  @default(0)
+  taxFee                 Float                  @default(0.0)
   images                 String[]
   
   creatorId              Int

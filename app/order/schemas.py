@@ -70,6 +70,7 @@ class SubOrderResponse(BaseModel):
     orderId: int
     storeId: int
     subTotal: float
+    totalShippingCharge: float = 0.0
     commissionAmount: float
     vendorEarnings: float
     isFulfield: bool
@@ -153,6 +154,7 @@ class DeliveryAddressResponseForAdmin(BaseModel):
 class OrderMinResponseForAdmin(BaseModel):
     id: int
     totalAmount: float
+    totalShippingCharge: float = 0.0
     isPaid: bool
     status: OrderStatus
     userId: int
@@ -179,6 +181,7 @@ class ProductDetailResponseForAdmin(BaseModel):
     discountPercentage: Optional[float] = None
     shippingResponsibility: ShippingResponsibility
     shippingCharge: float
+    taxFee: float = 0.0
     total_payable_amount: float
     images: List[str]
     averageRating: float
@@ -215,6 +218,7 @@ class SubOrderResponseForAdmin(BaseModel):
     orderId: int
     storeId: int
     subTotal: float
+    totalShippingCharge: float = 0.0
     commissionAmount: float
     vendorEarnings: float
     isFulfield: bool
@@ -266,6 +270,7 @@ class OrderCreate(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     totalAmount: float
+    totalShippingCharge: float = 0.0
     isPaid: bool
     status: OrderStatus
     deliveryAddressId: int

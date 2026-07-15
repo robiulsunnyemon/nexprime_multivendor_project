@@ -30,6 +30,7 @@ class ProductBase(BaseModel):
     shippingResponsibility: ShippingResponsibility = ShippingResponsibility.CUSTOMER
     shippingCharge: float = 0
     total_payable_amount: float = 0
+    taxFee: float = 0.0
 
 class ProductCreate(ProductBase):
     categoryIds: List[int]
@@ -45,6 +46,7 @@ class ProductUpdate(BaseModel):
     salePrice: Optional[float] = None
     shippingResponsibility: Optional[ShippingResponsibility] = None
     shippingCharge: Optional[float] = None
+    taxFee: Optional[float] = None
     categoryIds: Optional[List[int]] = None
 
 class SubCategorySimple(BaseModel):

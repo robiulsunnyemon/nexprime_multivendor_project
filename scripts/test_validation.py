@@ -55,7 +55,8 @@ mock_product_response = {
     "discountPercentage": None,
     "shippingResponsibility": "CUSTOMER",
     "shippingCharge": 10.0,
-    "total_payable_amount": 100.0,
+    "taxFee": 15.0,
+    "total_payable_amount": 125.0,
     "images": ["http://example.com/image.jpg"],
     "storeId": 10,
     "store": {
@@ -86,6 +87,7 @@ def test_endpoints():
         "colors": "RED,BLUE",
         "isDiscountSale": "false",
         "shippingCharge": 60.0,
+        "taxFee": 15.0,
         "category_ids": "[1, 2]"
     }
     # Mocking UploadFile for images
@@ -108,7 +110,8 @@ def test_endpoints():
 
     print("\n--- 3. Testing PATCH /vendor/products/1 with VALID size ---")
     patch_data_valid = {
-        "size": "S,XL"
+        "size": "S,XL",
+        "taxFee": 20.0
     }
     response = client.patch("/vendor/products/1", data=patch_data_valid)
     print(f"Status Code: {response.status_code}")

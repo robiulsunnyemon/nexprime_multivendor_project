@@ -46,10 +46,13 @@ class ProductService:
         shipping_charge = product_data.shippingCharge
         shipping_responsibility = product_data.shippingResponsibility
         
+        tax_fee_pct = product_data.taxFee
+        tax_amount = sale_price * (tax_fee_pct / 100)
+
         if shipping_responsibility == "CUSTOMER":
-            total_payable_amount = sale_price + shipping_charge
+            total_payable_amount = sale_price + tax_amount + shipping_charge
         else:
-            total_payable_amount = sale_price
+            total_payable_amount = sale_price + tax_amount
 
         return await prisma.product.create(
             data={
@@ -163,10 +166,13 @@ class ProductService:
         current_shipping_responsibility = update_payload.get("shippingResponsibility", product.shippingResponsibility)
         current_sale_price = update_payload.get("salePrice", product.salePrice)
 
+        current_tax_fee = update_payload.get("taxFee", product.taxFee)
+        tax_amount = current_sale_price * (current_tax_fee / 100)
+
         if current_shipping_responsibility == "CUSTOMER":
-            update_payload["total_payable_amount"] = current_sale_price + current_shipping_charge
+            update_payload["total_payable_amount"] = current_sale_price + tax_amount + current_shipping_charge
         else:
-            update_payload["total_payable_amount"] = current_sale_price
+            update_payload["total_payable_amount"] = current_sale_price + tax_amount
 
         if image_files:
             new_image_urls = []

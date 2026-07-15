@@ -21,6 +21,7 @@ async def create_product(
     salePrice: Optional[float] = Form(None),
     shippingResponsibility: ShippingResponsibility = Form(ShippingResponsibility.CUSTOMER),
     shippingCharge: float = Form(...),
+    taxFee: float = Form(0.0),
     category_ids: str = Form(...), # JSON string of IDs e.g. "[1, 2]"
     images: Annotated[Optional[List[Union[UploadFile, str]]], File(description="Select one or more product images")] = None,
     current_vendor=Depends(get_vendor)
@@ -79,6 +80,7 @@ async def create_product(
         salePrice=salePrice,
         shippingResponsibility=shippingResponsibility,
         shippingCharge=shippingCharge,
+        taxFee=taxFee,
         categoryIds=cat_ids
     )
     
@@ -193,6 +195,7 @@ async def update_product(
     salePrice: Optional[float] = Form(None),
     shippingResponsibility: Optional[ShippingResponsibility] = Form(None),
     shippingCharge: Optional[float] = Form(None),
+    taxFee: Optional[float] = Form(None),
     category_ids: Optional[str] = Form(None), 
     images: Annotated[Optional[List[Union[UploadFile, str]]], File(description="Select one or more product images")] = None,
     isDeleted: bool = Form(True, description="If true, old images will be replaced when new images are uploaded."),
@@ -243,6 +246,7 @@ async def update_product(
     if salePrice is not None: update_dict["salePrice"] = salePrice
     if shippingResponsibility is not None: update_dict["shippingResponsibility"] = shippingResponsibility
     if shippingCharge is not None: update_dict["shippingCharge"] = shippingCharge
+    if taxFee is not None: update_dict["taxFee"] = taxFee
 
     cat_ids = None
     if category_ids:
