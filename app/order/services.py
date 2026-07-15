@@ -539,13 +539,13 @@ class PaymentService:
         if not order or order.userId != user_id:
             raise HTTPException(status_code=404, detail="Order not found")
         
-        # Stripe expects amount in cents
-        amount = int(order.totalAmount * 100)
+        # Stripe expects amount in smallest currency unit, JPY is zero-decimal
+        amount = int(order.totalAmount)
         
         try:
             intent = stripe.PaymentIntent.create(
                 amount=amount,
-                currency="usd", 
+                currency="jpy", 
                 metadata={"order_id": order.id}
             )
             return {"clientSecret": intent.client_secret}
@@ -554,13 +554,13 @@ class PaymentService:
 
     @staticmethod
     async def create_wallet_topup_intent(user_id: int, amount: float):
-        # amount is in dollars, convert to cents for Stripe
-        stripe_amount = int(amount * 100)
+        # amount is in JPY, which is a zero-decimal currency
+        stripe_amount = int(amount)
         
         try:
             intent = stripe.PaymentIntent.create(
                 amount=stripe_amount,
-                currency="usd",
+                currency="jpy",
                 metadata={
                     "type": "wallet_topup",
                     "user_id": user_id
