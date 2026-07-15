@@ -27,10 +27,17 @@ class MarketingProductService:
             url = await upload_image_helper(file, folder="marketing_products")
             image_urls.append(url)
         
-        # 3. Create product
+        # 3. Modify data dump to calculate price with tax
+        data_dump = product_data.model_dump()
+        base_price = data_dump["price"]
+        tax_fee_pct = data_dump.get("taxFee", 0.0)
+        tax_amount = base_price * (tax_fee_pct / 100)
+        data_dump["price"] = base_price + tax_amount
+
+        # 4. Create product
         return await prisma.marketingproduct.create(
             data={
-                **product_data.model_dump(),
+                **data_dump,
                 "creatorId": creator_id,
                 "images": image_urls
             },
@@ -107,6 +114,19 @@ class MarketingProductService:
         
         # 2. Prepare update data
         data_to_update = update_data.model_dump(exclude_unset=True, exclude_none=True)
+        
+        # Calculate new price if price or taxFee is updated
+        if "price" in data_to_update or "taxFee" in data_to_update:
+            if "price" in data_to_update:
+                base_price = data_to_update["price"]
+            else:
+                # Calculate base price from existing price and taxFee
+                existing_tax_pct = product.taxFee
+                base_price = product.price / (1 + existing_tax_pct / 100) if existing_tax_pct > 0 else product.price
+
+            tax_fee_pct = data_to_update.get("taxFee", product.taxFee)
+            tax_amount = base_price * (tax_fee_pct / 100)
+            data_to_update["price"] = base_price + tax_amount
         
         # 3. Handle images if provided
         if image_files:

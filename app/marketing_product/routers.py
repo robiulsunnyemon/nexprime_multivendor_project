@@ -22,6 +22,7 @@ async def create_marketing_product(
     description: str = Form(...),
     price: float = Form(...),
     shippingResponsibility: ShippingResponsibility = Form(...),
+    taxFee: float = Form(0.0),
     images: List[UploadFile] = File(...),
     current_user=Depends(get_current_user)
 ):
@@ -61,7 +62,8 @@ async def create_marketing_product(
         price=price,
         publishingFee=publishingFee,
         shippingResponsibility=shippingResponsibility,
-        shippingCharge=shippingCharge
+        shippingCharge=shippingCharge,
+        taxFee=taxFee
     )
 
     return await MarketingProductService.create_marketing_product(
@@ -103,6 +105,7 @@ async def update_marketing_product(
     description: Optional[str] = Form(None),
     price: Optional[float] = Form(None),
     shippingResponsibility: Optional[ShippingResponsibility] = Form(None),
+    taxFee: Optional[float] = Form(None),
     images: Optional[List[UploadFile]] = File(None),
     current_user=Depends(get_current_user)
 ):
@@ -113,7 +116,8 @@ async def update_marketing_product(
         location=location,
         description=description,
         price=price,
-        shippingResponsibility=shippingResponsibility
+        shippingResponsibility=shippingResponsibility,
+        taxFee=taxFee
     )
 
     return await MarketingProductService.update_marketing_product(
