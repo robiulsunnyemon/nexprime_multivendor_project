@@ -129,7 +129,8 @@ class ChatService:
 
         # 2. Get user details
         users = await prisma.user.find_many(
-            where={"id": {"in": interacted_user_ids}}
+            where={"id": {"in": interacted_user_ids}},
+            include={"store": True}
         )
         user_dict = {user.id: user for user in users}
         
@@ -150,7 +151,7 @@ class ChatService:
                     lastMessage=user_last_messages[uid]["content"],
                     lastMessageTime=user_last_messages[uid]["time"],
                     unreadCount=unread_counts.get(uid, 0),
-                    profileImageUrl=user.profileImageUrl
+                    profileImageUrl=user.store.photo if getattr(user, "store", None) else user.profileImageUrl
                 )
                 result.append(res)
         
@@ -167,7 +168,8 @@ class ChatService:
 
         users = await prisma.user.find_many(
             where={"id": {"in": online_ids}},
-            order={"lastActiveAt": "desc"}
+            order={"lastActiveAt": "desc"},
+            include={"store": True}
         )
         
         from app.chat.schemas import ActiveUserResponse
@@ -178,7 +180,7 @@ class ChatService:
                 email=u.email,
                 isOnline=True,
                 lastActiveAt=u.lastActiveAt,
-                profileImageUrl=u.profileImageUrl
+                profileImageUrl=u.store.photo if getattr(u, "store", None) else u.profileImageUrl
             ) for u in users
         ]
 
