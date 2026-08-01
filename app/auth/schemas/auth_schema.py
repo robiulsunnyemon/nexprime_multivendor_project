@@ -85,6 +85,9 @@ class UserOut(BaseModel):
     residentcard_frontside: str
     residentcard_backside: str
     location: Optional[str] = None
+    stripeAccountId: Optional[str] = None
+    isStripeOnboardingCompleted: bool = False
+    stripeAccountStatus: Optional[str] = "NOT_CONNECTED"
 
     class Config:
         from_attributes = True

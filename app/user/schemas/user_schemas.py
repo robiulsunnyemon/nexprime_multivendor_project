@@ -27,6 +27,9 @@ class UserResponse(BaseModel):
     residentcard_backside: str
     is_verified: bool
     location: Optional[str] = None
+    stripeAccountId: Optional[str] = None
+    isStripeOnboardingCompleted: bool = False
+    stripeAccountStatus: Optional[str] = "NOT_CONNECTED"
     createdAt: datetime
     updatedAt: datetime
 
@@ -69,6 +72,9 @@ class VendorSchema(BaseModel):
     residentcard_frontside: str
     residentcard_backside: str
     location: Optional[str] = None
+    stripeAccountId: Optional[str] = None
+    isStripeOnboardingCompleted: bool = False
+    stripeAccountStatus: Optional[str] = "NOT_CONNECTED"
     createdAt: datetime
     updatedAt: datetime
     store: Optional[StoreSchema] = None
