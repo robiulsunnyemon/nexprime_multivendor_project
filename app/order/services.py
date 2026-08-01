@@ -3,6 +3,7 @@ from app.database.db import prisma
 from fastapi import HTTPException
 from app.order.schemas import DeliveryAddressCreate, OrderCreate, RatingCreate
 from app.cart.services import CartService
+from app.vendor.stripe_connect_service import StripeConnectService
 from decimal import Decimal
 import stripe
 import os
@@ -417,6 +418,14 @@ class OrderService:
         # মেইন অর্ডারের স্ট্যাটাস আপডেট
         await OrderService._update_order_status(sub_order.orderId)
 
+        # Stripe Connect: DELIVERED/Completed হলে ভেন্ডরের Stripe অ্যাকাউন্টে টাকা ট্রান্সফার করা
+        if is_complete:
+            try:
+                await StripeConnectService.transfer_funds_to_vendor(suborder_id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error transferring Stripe Connect funds for suborder {suborder_id}: {e}")
+
         return updated_suborder
 
     @staticmethod
@@ -541,12 +550,22 @@ class PaymentService:
         
         # Stripe expects amount in smallest currency unit, JPY is zero-decimal
         amount = int(order.totalAmount)
+        transfer_group = f"ORDER_{order.id}"
         
         try:
             intent = stripe.PaymentIntent.create(
                 amount=amount,
                 currency="jpy", 
+                transfer_group=transfer_group,
                 metadata={"order_id": order.id}
+            )
+
+            await prisma.order.update(
+                where={"id": order.id},
+                data={
+                    "stripePaymentIntentId": intent.id,
+                    "transferGroup": transfer_group,
+                }
             )
             return {"clientSecret": intent.client_secret}
         except Exception as e:
@@ -578,17 +597,21 @@ class PaymentService:
         except Exception as e:
             # Fallback for testing without a real secret during development if needed
             if not endpoint_secret:
-                # DANGEROUS: Only for dev if secrets aren't set yet
                 import json
                 event_data = json.loads(payload)
-                if event_data['type'] == 'payment_intent.succeeded':
+                event_type = event_data.get('type')
+                if event_type == 'payment_intent.succeeded':
                     intent = event_data['data']['object']
                     order_id = int(intent['metadata']['order_id'])
                     await PaymentService.process_successful_payment(order_id)
+                elif event_type == 'account.updated':
+                    account = event_data['data']['object']
+                    await StripeConnectService.check_account_status(int(account['metadata'].get('user_id', 0)))
                 return {"status": "success (mocked)"}
             raise HTTPException(status_code=400, detail="Invalid webhook payload")
 
-        if event['type'] == 'payment_intent.succeeded':
+        event_type = event['type']
+        if event_type == 'payment_intent.succeeded':
             intent = event['data']['object']
             p_type = intent['metadata'].get("type")
             
@@ -599,6 +622,22 @@ class PaymentService:
             else:
                 order_id = int(intent['metadata']['order_id'])
                 await PaymentService.process_successful_payment(order_id)
+
+        elif event_type == 'account.updated':
+            account = event['data']['object']
+            account_id = account['id']
+            user = await prisma.user.find_first(where={"stripeAccountId": account_id})
+            if user:
+                is_completed = account.get('details_submitted', False)
+                payouts_enabled = account.get('payouts_enabled', False)
+                status_str = "ACTIVE" if (is_completed and payouts_enabled) else "PENDING"
+                await prisma.user.update(
+                    where={"id": user.id},
+                    data={
+                        "isStripeOnboardingCompleted": is_completed,
+                        "stripeAccountStatus": status_str,
+                    }
+                )
         
         return {"status": "success"}
 

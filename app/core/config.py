@@ -24,6 +24,8 @@ class Settings(BaseSettings):
 
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_CONNECT_RETURN_URL: str = "nexprime://stripe-callback"
+    STRIPE_CONNECT_REFRESH_URL: str = "nexprime://stripe-refresh"
 
     LIVEKIT_URL: str = "wss://dummy.livekit.cloud"
     LIVEKIT_API_KEY: str = "dummy_key"
