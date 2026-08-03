@@ -25,16 +25,40 @@ class StripeConnectService:
             return user.stripeAccountId
 
         try:
-            account = stripe.Account.create(
-                type="express",
-                country=country,
-                email=user.email,
-                capabilities={
-                    "card_payments": {"requested": True},
-                    "transfers": {"requested": True},
-                },
-                metadata={"user_id": str(user.id)},
-            )
+            # Try modern Stripe Connect Account creation using controller configuration
+            try:
+                account = stripe.Account.create(
+                    controller={
+                        "stripe_dashboard": {
+                            "type": "express",
+                        },
+                        "fees": {
+                            "payer": "application",
+                        },
+                        "losses": {
+                            "payments": "application",
+                        },
+                    },
+                    country=country,
+                    email=user.email,
+                    capabilities={
+                        "card_payments": {"requested": True},
+                        "transfers": {"requested": True},
+                    },
+                    metadata={"user_id": str(user.id)},
+                )
+            except stripe.error.StripeError as err:
+                logger.info(f"Stripe Controller creation attempt: {err}. Falling back to type='express'")
+                account = stripe.Account.create(
+                    type="express",
+                    country=country,
+                    email=user.email,
+                    capabilities={
+                        "card_payments": {"requested": True},
+                        "transfers": {"requested": True},
+                    },
+                    metadata={"user_id": str(user.id)},
+                )
             
             stripe_account_id = account.id
 
@@ -48,7 +72,10 @@ class StripeConnectService:
             return stripe_account_id
         except stripe.error.StripeError as e:
             logger.error(f"Stripe Account Creation Error: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"{str(e)} - If Accounts v1 is required by your Stripe account, please enable Accounts v1 support at https://dashboard.stripe.com/settings/features/feat_accounts_v1_support"
+            )
 
     @staticmethod
     async def create_onboarding_link(user_id: int) -> str:
