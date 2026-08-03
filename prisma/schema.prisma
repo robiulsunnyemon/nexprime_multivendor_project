@@ -275,6 +275,8 @@ model SubOrder {
   commissionAmount Float       @default(0.0)
   vendorEarnings   Float       @default(0.0)
   isFulfield       Boolean     @default(false)
+  vendorConfirmed  Boolean     @default(false)
+  customerConfirmed Boolean    @default(false)
   isComplete       Boolean     @default(false)
   isArchive        Boolean     @default(false)
   trackingNumber   String?
