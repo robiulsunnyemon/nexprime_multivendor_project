@@ -337,9 +337,10 @@ class OrderService:
                 detail="A tracking number is required to mark this sub-order as fulfilled (shipped)."
             )
 
-        # অর্ডারটি পেইড কিনা চেক করা
+        # অর্ডারটি পেইড কিনা চেক করা (COD অর্ডারে পেইড চেক স্কিপ হবে)
         parent_order = await prisma.order.find_unique(where={"id": sub_order.orderId})
-        if not parent_order or not parent_order.isPaid:
+        is_cod = parent_order and getattr(parent_order, "paymentMethod", "ONLINE") == "COD"
+        if not parent_order or (not is_cod and not parent_order.isPaid):
             raise HTTPException(
                 status_code=400,
                 detail="Cannot fulfill a sub-order that has not been paid yet."
@@ -371,9 +372,10 @@ class OrderService:
         if not sub_order or sub_order.store.vendorId != vendor_id:
             raise HTTPException(status_code=403, detail="You do not own this sub-order.")
 
-        # অর্ডারটি পেইড কিনা চেক
+        # অর্ডারটি পেইড কিনা চেক (COD অর্ডারে পেইড চেক স্কিপ হবে)
         parent_order = await prisma.order.find_unique(where={"id": sub_order.orderId})
-        if not parent_order or not parent_order.isPaid:
+        is_cod = parent_order and getattr(parent_order, "paymentMethod", "ONLINE") == "COD"
+        if not parent_order or (not is_cod and not parent_order.isPaid):
             raise HTTPException(
                 status_code=400,
                 detail="Cannot complete a sub-order that has not been paid yet."
@@ -404,6 +406,13 @@ class OrderService:
                 include={"orderItems": {"include": {"product": True}}, "store": True}
             )
 
+            # COD অর্ডারে ডেলিভারি সম্পন্ন হলে isPaid = True সেট করা
+            if is_cod and is_complete:
+                await tx.order.update(
+                    where={"id": sub_order.orderId},
+                    data={"isPaid": True}
+                )
+
             # ভেন্ডরের ওয়ালেটে আয় ক্রেডিট করা
             if is_complete and sub_order.vendorEarnings > 0:
                 # ভেন্ডর ইউজার আইডি বের করা
@@ -432,15 +441,15 @@ class OrderService:
                             "userId": vendor_user.vendorId,
                             "amount": sub_order.vendorEarnings,
                             "type": "TOPUP",
-                            "description": f"Order #{sub_order.orderId} সম্পন্ন হওয়ায় আয় ক্রেডিট।"
+                            "description": f"Order #{sub_order.orderId} {'(COD) ' if is_cod else ''}সম্পন্ন হওয়ায় আয় ক্রেডিট।"
                         }
                     )
 
         # মেইন অর্ডারের স্ট্যাটাস আপডেট
         await OrderService._update_order_status(sub_order.orderId)
 
-        # Stripe Connect: DELIVERED/Completed হলে ভেন্ডরের Stripe অ্যাকাউন্টে টাকা ট্রান্সফার করা
-        if is_complete:
+        # Stripe Connect: DELIVERED/Completed হলে ভেন্ডরের Stripe অ্যাকাউন্টে টাকা ট্রান্সফার করা (COD অর্ডারে স্কিপ)
+        if is_complete and not is_cod:
             try:
                 await StripeConnectService.transfer_funds_to_vendor(suborder_id)
             except Exception as e:
