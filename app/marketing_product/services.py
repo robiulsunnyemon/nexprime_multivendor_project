@@ -4,37 +4,75 @@ from fastapi import UploadFile, HTTPException
 from typing import List, Optional
 from app.marketing_product.schemas import MarketingProductCreate, MarketingProductUpdate
 
+import os
+import stripe
+
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+
 class MarketingProductService:
+    @staticmethod
+    async def create_publishing_fee_payment_intent(creator_id: int, amount: float):
+        stripe_amount = int(amount)
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=stripe_amount,
+                currency="jpy",
+                metadata={
+                    "type": "marketing_product_fee",
+                    "creator_id": str(creator_id)
+                }
+            )
+            return {
+                "clientSecret": intent.client_secret,
+                "paymentIntentId": intent.id,
+                "fee": amount
+            }
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=str(e))
+
     @staticmethod
     async def create_marketing_product(
         product_data: MarketingProductCreate, 
         creator_id: int, 
-        image_files: List[UploadFile]
+        image_files: List[UploadFile],
+        stripe_payment_intent_id: Optional[str] = None
     ):
-        from app.user.services.wallet_service import WalletService
-        
-        # 1. Deduct fee from wallet
         fee = product_data.publishingFee
-        await WalletService.deduct_funds(
-            user_id=creator_id,
-            amount=fee,
-            description=f"Publishing fee for product: {product_data.name}"
-        )
+        
+        # If publishing fee is greater than 0, verify live Stripe payment intent
+        if fee > 0:
+            if not stripe_payment_intent_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Publishing fee payment is required for this product."
+                )
+            try:
+                intent = stripe.PaymentIntent.retrieve(stripe_payment_intent_id)
+                if intent.status != "succeeded":
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Publishing fee payment is not completed (status: {intent.status})."
+                    )
+            except stripe.error.StripeError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Stripe payment verification failed: {str(e)}"
+                )
 
-        # 2. Upload images
+        # Upload images
         image_urls = []
         for file in image_files:
             url = await upload_image_helper(file, folder="marketing_products")
             image_urls.append(url)
         
-        # 3. Modify data dump to calculate price with tax
+        # Modify data dump to calculate price with tax
         data_dump = product_data.model_dump()
         base_price = data_dump["price"]
         tax_fee_pct = data_dump.get("taxFee", 0.0)
         tax_amount = base_price * (tax_fee_pct / 100)
         data_dump["price"] = base_price + tax_amount
 
-        # 4. Create product
+        # Create product
         return await prisma.marketingproduct.create(
             data={
                 **data_dump,

@@ -12,6 +12,26 @@ from app.marketing_product.services import MarketingProductService
 
 router = APIRouter(prefix="/marketing-products", tags=["Marketing Product Management"])
 
+@router.post("/create-payment-intent", summary="Create Stripe Payment Intent for publishing fee")
+async def create_publishing_fee_payment_intent(
+    current_user=Depends(get_current_user)
+):
+    if str(current_user.role) != "CUSTOMER":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only customers can create marketing products"
+        )
+    setting = await prisma.marketingproductsetting.find_unique(where={"id": 1})
+    fee = setting.publishingFee if setting else 0.50
+
+    if fee <= 0:
+        return {"clientSecret": "", "paymentIntentId": "", "fee": 0.0}
+
+    return await MarketingProductService.create_publishing_fee_payment_intent(
+        creator_id=current_user.id,
+        amount=fee
+    )
+
 @router.post("", response_model=MarketingProductWithCreatorResponse, summary="Create a new marketing product (Customers only)")
 async def create_marketing_product(
     name: str = Form(...),
@@ -23,6 +43,7 @@ async def create_marketing_product(
     price: float = Form(...),
     shippingResponsibility: ShippingResponsibility = Form(...),
     taxFee: float = Form(0.0),
+    stripePaymentIntentId: Optional[str] = Form(None),
     images: List[UploadFile] = File(...),
     current_user=Depends(get_current_user)
 ):
@@ -69,7 +90,8 @@ async def create_marketing_product(
     return await MarketingProductService.create_marketing_product(
         product_data=product_data,
         creator_id=current_user.id,
-        image_files=images
+        image_files=images,
+        stripe_payment_intent_id=stripePaymentIntentId
     )
 
 @router.get("", response_model=List[MarketingProductWithCreatorResponse], summary="Get all marketing products")
