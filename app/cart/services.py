@@ -105,7 +105,8 @@ class CartService:
             order={"createdAt": "desc"}
         )
 
-        total_amount = Decimal("0")
+        subtotal_amount = Decimal("0")
+        total_shipping_charge = Decimal("0")
         total_items = 0
 
         for item in items:
@@ -116,13 +117,22 @@ class CartService:
             
             # Using total_payable_amount from the product model
             price = Decimal(str(product.total_payable_amount or 0))
+            subtotal_amount += price * item.quantity
 
-            total_amount += price * item.quantity
+            # Calculate shipping charge for CUSTOMER responsibility
+            resp = getattr(product, "shippingResponsibility", "CUSTOMER")
+            if (resp == "CUSTOMER" or not resp) and product.shippingCharge:
+                total_shipping_charge += Decimal(str(product.shippingCharge)) * item.quantity
+
             total_items += item.quantity
+
+        total_amount = subtotal_amount + total_shipping_charge
 
         return {
             "items": items,
             "totalItems": total_items,
+            "subtotalAmount": float(subtotal_amount.quantize(Decimal("0.01"))),
+            "totalShippingCharge": float(total_shipping_charge.quantize(Decimal("0.01"))),
             "totalAmount": float(total_amount.quantize(Decimal("0.01")))
         }
 
