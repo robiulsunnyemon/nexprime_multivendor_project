@@ -95,12 +95,12 @@ class StripeConnectService:
         stripe_account_id = await StripeConnectService.get_or_create_express_account(user_id)
 
         refresh_url = settings.STRIPE_CONNECT_REFRESH_URL or "https://api.nexprimeapp.com/vendor/stripe/onboarding-link"
-        return_url = settings.STRIPE_CONNECT_RETURN_URL or "https://api.nexprimeapp.com/vendor/stripe/status"
+        return_url = settings.STRIPE_CONNECT_RETURN_URL or "https://api.nexprimeapp.com/vendor/stripe/success"
 
         if not (refresh_url.startswith("http://") or refresh_url.startswith("https://")):
             refresh_url = "https://api.nexprimeapp.com/vendor/stripe/onboarding-link"
         if not (return_url.startswith("http://") or return_url.startswith("https://")):
-            return_url = "https://api.nexprimeapp.com/vendor/stripe/status"
+            return_url = "https://api.nexprimeapp.com/vendor/stripe/success"
 
         try:
             account_link = stripe.AccountLink.create(

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
 
     STRIPE_SECRET_KEY: str = ""
     STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_CONNECT_RETURN_URL: str = "https://api.nexprimeapp.com/vendor/stripe/status"
+    STRIPE_CONNECT_RETURN_URL: str = "https://api.nexprimeapp.com/vendor/stripe/success"
     STRIPE_CONNECT_REFRESH_URL: str = "https://api.nexprimeapp.com/vendor/stripe/onboarding-link"
 
     LIVEKIT_URL: str = "wss://dummy.livekit.cloud"
