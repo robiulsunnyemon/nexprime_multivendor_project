@@ -43,21 +43,25 @@ class OrderService:
         if not cart["items"]:
             raise HTTPException(status_code=400, detail="Cart is empty")
 
-        # 2. Group items by storeId
+        # 2. Validate paymentMethod
+        payment_method = (order_data.paymentMethod or "ONLINE").upper()
+        if payment_method not in ("ONLINE", "COD"):
+            raise HTTPException(status_code=400, detail="paymentMethod must be ONLINE or COD")
+
+        # 3. Group items by storeId
         items_by_store = {}
         for item in cart["items"]:
             if item.product.stockUnits < item.quantity:
                 raise HTTPException(
-                    status_code=400, 
+                    status_code=400,
                     detail=f"Product {item.product.name} has insufficient stock."
                 )
-            
             store_id = item.product.storeId
             if store_id not in items_by_store:
                 items_by_store[store_id] = []
             items_by_store[store_id].append(item)
 
-        # 3. Create Order and SubOrders in a transaction
+        # 4. Create Order and SubOrders in a transaction
         async with prisma.tx() as tx:
             overall_total_shipping_charge = sum(
                 (item.product.shippingCharge * item.quantity)
@@ -72,6 +76,7 @@ class OrderService:
                     "totalShippingCharge": float(overall_total_shipping_charge),
                     "userId": user_id,
                     "deliveryAddressId": order_data.deliveryAddressId,
+                    "paymentMethod": payment_method,
                 }
             )
 
@@ -85,15 +90,19 @@ class OrderService:
                     (item.product.shippingCharge * item.quantity)
                     for item in store_items if item.product.shippingResponsibility == "CUSTOMER"
                 )
-                
-                sub_order = await tx.suborder.create(
-                    data={
-                        "orderId": order.id,
-                        "storeId": store_id,
-                        "subTotal": float(sub_total),
-                        "totalShippingCharge": float(sub_shipping_charge)
-                    }
-                )
+
+                # COD অর্ডারে 0% কমিশন: vendor সম্পূর্ণ subtotal পাবে
+                suborder_data = {
+                    "orderId": order.id,
+                    "storeId": store_id,
+                    "subTotal": float(sub_total),
+                    "totalShippingCharge": float(sub_shipping_charge)
+                }
+                if payment_method == "COD":
+                    suborder_data["commissionAmount"] = 0.0
+                    suborder_data["vendorEarnings"] = float(sub_total)
+
+                sub_order = await tx.suborder.create(data=suborder_data)
 
                 for item in store_items:
                     price = item.product.total_payable_amount or 0
@@ -442,7 +451,9 @@ class OrderService:
         if not sub_order or sub_order.order.userId != user_id:
             raise HTTPException(status_code=403, detail="You do not own this order.")
 
-        if not sub_order.order.isPaid:
+        # COD অর্ডারে isPaid চেক লাগবে না (কারণ ডিলিভারির সময় নগদ দেওয়া হয়)
+        is_cod = sub_order.order.paymentMethod == "COD"
+        if not is_cod and not sub_order.order.isPaid:
             raise HTTPException(status_code=400, detail="Cannot confirm an unpaid order.")
 
         if sub_order.isComplete:
@@ -462,6 +473,13 @@ class OrderService:
                 }
             )
 
+            if is_cod:
+                # COD: ডেলিভারি নিশ্চিত হলে অর্ডার isPaid = True সেট করা
+                await tx.order.update(
+                    where={"id": sub_order.orderId},
+                    data={"isPaid": True}
+                )
+
             if sub_order.vendorEarnings > 0:
                 vendor_user = await tx.store.find_unique(where={"id": sub_order.storeId})
                 if vendor_user:
@@ -479,17 +497,19 @@ class OrderService:
                             "userId": vendor_user.vendorId,
                             "amount": sub_order.vendorEarnings,
                             "type": "TOPUP",
-                            "description": f"Order #{sub_order.orderId} কাস্টমার গ্রহণ নিশ্চিত করায় ইনকাম ক্রেডিট।"
+                            "description": f"Order #{sub_order.orderId} {'(COD) ' if is_cod else ''}কাস্টমার গ্রহণ নিশ্চিত করায় ইনকাম ক্রেডিট।"
                         }
                     )
 
         await OrderService._update_order_status(sub_order.orderId)
 
-        try:
-            await StripeConnectService.transfer_funds_to_vendor(suborder_id)
-        except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Error transferring Stripe Connect funds for suborder {suborder_id}: {e}")
+        # COD অর্ডারে Stripe Transfer লাগবে না (নগদ লেনদেন হয়েছে)
+        if not is_cod:
+            try:
+                await StripeConnectService.transfer_funds_to_vendor(suborder_id)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(f"Error transferring Stripe Connect funds for suborder {suborder_id}: {e}")
 
         return updated_suborder
 
@@ -555,7 +575,7 @@ class OrderService:
     @staticmethod
     async def get_vendor_suborders(vendor_id: int):
         """
-        শুধুমাত্র পেইড অর্ডারের সাব-অর্ডারগুলো নির্দিষ্ট ভেন্ডরকে দেখানো হবে।
+        পেইড অর্ডার এবং COD (ক্যাশ অন ডেলিভারি) সাব-অর্ডারগুলো নির্দিষ্ট ভেন্ডরকে দেখানো হবে।
         এর সাথে কাস্টমার ইনফো, ডেলিভারি অ্যাড্রেস এবং প্রোডাক্টের সম্পূর্ণ ডিটেইলস থাকবে।
         """
         return await prisma.suborder.find_many(
@@ -563,9 +583,10 @@ class OrderService:
                 "store": {
                     "vendorId": vendor_id
                 },
-                "order": {
-                    "isPaid": True
-                }
+                "OR": [
+                    {"order": {"isPaid": True}},
+                    {"order": {"paymentMethod": "COD"}}
+                ]
             },
             include={
                 # প্রতিটি সাব-অর্ডারের আইটেম এবং প্রোডাক্টের সব ডিটেইলস নিয়ে আসবে

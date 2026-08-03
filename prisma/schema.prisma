@@ -252,6 +252,7 @@ model Order {
   totalShippingCharge Float       @default(0.0)
   isPaid            Boolean         @default(false)
   status            OrderStatus     @default(PENDING)
+  paymentMethod     String          @default("ONLINE")
   deliveryAddressId Int
   deliveryAddress   DeliveryAddress @relation(fields: [deliveryAddressId], references: [id], onDelete: Cascade)
   userId            Int
