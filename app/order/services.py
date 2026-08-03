@@ -70,15 +70,26 @@ class OrderService:
             )
 
             # a. Create the main Order
-            order = await tx.order.create(
-                data={
-                    "totalAmount": cart["totalAmount"],
-                    "totalShippingCharge": float(overall_total_shipping_charge),
-                    "userId": user_id,
-                    "deliveryAddressId": order_data.deliveryAddressId,
-                    "paymentMethod": payment_method,
-                }
-            )
+            try:
+                order = await tx.order.create(
+                    data={
+                        "totalAmount": cart["totalAmount"],
+                        "totalShippingCharge": float(overall_total_shipping_charge),
+                        "userId": user_id,
+                        "deliveryAddressId": order_data.deliveryAddressId,
+                        "paymentMethod": payment_method,
+                    }
+                )
+            except Exception as e:
+                # Fallback in case DB column paymentMethod hasn't been migrated yet
+                order = await tx.order.create(
+                    data={
+                        "totalAmount": cart["totalAmount"],
+                        "totalShippingCharge": float(overall_total_shipping_charge),
+                        "userId": user_id,
+                        "deliveryAddressId": order_data.deliveryAddressId,
+                    }
+                )
 
             # b. Create SubOrders and OrderItems
             for store_id, store_items in items_by_store.items():

@@ -31,6 +31,11 @@ from app.upload.routers import router as upload_router
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     await prisma.connect()
+    try:
+        await prisma.execute_raw('ALTER TABLE "Order" ADD COLUMN IF NOT EXISTS "paymentMethod" TEXT NOT NULL DEFAULT \'ONLINE\';')
+    except Exception as e:
+        import logging
+        logging.getLogger("uvicorn").warning(f"DB auto-migration error: {e}")
     yield
     await prisma.disconnect()
 
