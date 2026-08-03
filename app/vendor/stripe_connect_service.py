@@ -1,5 +1,6 @@
 import logging
 import os
+import requests
 import stripe
 from datetime import datetime
 from fastapi import HTTPException, status
@@ -24,69 +25,88 @@ class StripeConnectService:
         if user.stripeAccountId:
             return user.stripeAccountId
 
-        try:
-            # Try modern Stripe Connect Account creation using controller configuration
-            try:
-                account = stripe.Account.create(
-                    controller={
-                        "stripe_dashboard": {
-                            "type": "express",
-                        },
-                        "fees": {
-                            "payer": "application",
-                        },
-                        "losses": {
-                            "payments": "application",
-                        },
-                    },
-                    country=country,
-                    email=user.email,
-                    capabilities={
-                        "card_payments": {"requested": True},
-                        "transfers": {"requested": True},
-                    },
-                    metadata={"user_id": str(user.id)},
-                )
-            except stripe.error.StripeError as err:
-                logger.info(f"Stripe Controller creation attempt: {err}. Falling back to type='express'")
-                account = stripe.Account.create(
-                    type="express",
-                    country=country,
-                    email=user.email,
-                    capabilities={
-                        "card_payments": {"requested": True},
-                        "transfers": {"requested": True},
-                    },
-                    metadata={"user_id": str(user.id)},
-                )
-            
-            stripe_account_id = account.id
+        secret_key = settings.STRIPE_SECRET_KEY or os.getenv("STRIPE_SECRET_KEY")
 
-            await db.user.update(
-                where={"id": user_id},
-                data={
-                    "stripeAccountId": stripe_account_id,
-                    "stripeAccountStatus": "PENDING",
+        try:
+            # 1. Try standard v1 Account creation
+            account = stripe.Account.create(
+                type="express",
+                country=country,
+                email=user.email,
+                capabilities={
+                    "card_payments": {"requested": True},
+                    "transfers": {"requested": True},
                 },
+                metadata={"user_id": str(user.id)},
             )
-            return stripe_account_id
+            stripe_account_id = account.id
         except stripe.error.StripeError as e:
-            logger.error(f"Stripe Account Creation Error: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"{str(e)} - If Accounts v1 is required by your Stripe account, please enable Accounts v1 support at https://dashboard.stripe.com/settings/features/feat_accounts_v1_support"
-            )
+            err_msg = str(e)
+            logger.warning(f"Stripe v1 Account creation failed ({err_msg}). Attempting Stripe v2 API /v2/core/accounts...")
+
+            # 2. Try Stripe v2 Core Accounts API endpoint
+            try:
+                resp = requests.post(
+                    "https://api.stripe.com/v2/core/accounts",
+                    headers={
+                        "Authorization": f"Bearer {secret_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "contact_email": user.email,
+                        "identity": {
+                            "country": country,
+                        },
+                    },
+                    timeout=15,
+                )
+                if resp.status_code in (200, 201):
+                    res_data = resp.json()
+                    stripe_account_id = res_data.get("id")
+                    logger.info(f"Successfully created Stripe v2 Account: {stripe_account_id}")
+                else:
+                    v2_err = resp.text
+                    logger.error(f"Stripe v2 Core Accounts creation failed: {v2_err}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"{err_msg} - Action Required: Enable Accounts v1 in Stripe Dashboard: https://dashboard.stripe.com/settings/features/feat_accounts_v1_support"
+                    )
+            except HTTPException:
+                raise
+            except Exception as v2_ex:
+                logger.error(f"Stripe v2 endpoint exception: {v2_ex}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"{err_msg} - Action Required: Enable Accounts v1 in Stripe Dashboard: https://dashboard.stripe.com/settings/features/feat_accounts_v1_support"
+                )
+
+        await db.user.update(
+            where={"id": user_id},
+            data={
+                "stripeAccountId": stripe_account_id,
+                "stripeAccountStatus": "PENDING",
+            },
+        )
+        return stripe_account_id
 
     @staticmethod
     async def create_onboarding_link(user_id: int) -> str:
         """Generate a Stripe Express onboarding AccountLink URL for vendor."""
         stripe_account_id = await StripeConnectService.get_or_create_express_account(user_id)
 
+        refresh_url = settings.STRIPE_CONNECT_REFRESH_URL or "https://api.nexprimeapp.com/vendor/stripe/onboarding-link"
+        return_url = settings.STRIPE_CONNECT_RETURN_URL or "https://api.nexprimeapp.com/vendor/stripe/status"
+
+        if not (refresh_url.startswith("http://") or refresh_url.startswith("https://")):
+            refresh_url = "https://api.nexprimeapp.com/vendor/stripe/onboarding-link"
+        if not (return_url.startswith("http://") or return_url.startswith("https://")):
+            return_url = "https://api.nexprimeapp.com/vendor/stripe/status"
+
         try:
             account_link = stripe.AccountLink.create(
                 account=stripe_account_id,
-                refresh_url=settings.STRIPE_CONNECT_REFRESH_URL,
-                return_url=settings.STRIPE_CONNECT_RETURN_URL,
+                refresh_url=refresh_url,
+                return_url=return_url,
                 type="account_onboarding",
             )
             return account_link.url
