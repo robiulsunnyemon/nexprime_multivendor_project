@@ -12,6 +12,14 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 class MarketingProductService:
     @staticmethod
     async def create_publishing_fee_payment_intent(creator_id: int, amount: float):
+        # Stripe minimum charge for JPY currency is 50 JPY
+        if amount < 50:
+            return {
+                "clientSecret": "",
+                "paymentIntentId": "",
+                "fee": amount
+            }
+
         stripe_amount = int(amount)
         try:
             intent = stripe.PaymentIntent.create(
@@ -39,8 +47,8 @@ class MarketingProductService:
     ):
         fee = product_data.publishingFee
         
-        # If publishing fee is greater than 0, verify live Stripe payment intent
-        if fee > 0:
+        # Stripe requires minimum 50 JPY for JPY payments. If fee >= 50, verify live Stripe payment intent
+        if fee >= 50:
             if not stripe_payment_intent_id:
                 raise HTTPException(
                     status_code=400,
