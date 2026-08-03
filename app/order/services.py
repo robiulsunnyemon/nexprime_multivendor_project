@@ -429,6 +429,63 @@ class OrderService:
         return updated_suborder
 
     @staticmethod
+    async def confirm_suborder_receipt(suborder_id: int, user_id: int):
+        """কাস্টমার কর্তৃক প্রোডাক্ট পাওয়া নিশ্চিত করা এবং ভেন্ডরের একাউন্টে টাকা ট্রান্সফার করা।"""
+        sub_order = await prisma.suborder.find_unique(
+            where={"id": suborder_id},
+            include={"order": True, "store": True}
+        )
+        if not sub_order or sub_order.order.userId != user_id:
+            raise HTTPException(status_code=403, detail="You do not own this order.")
+
+        if not sub_order.order.isPaid:
+            raise HTTPException(status_code=400, detail="Cannot confirm an unpaid order.")
+
+        if sub_order.isComplete:
+            return sub_order
+
+        async with prisma.tx() as tx:
+            updated_suborder = await tx.suborder.update(
+                where={"id": suborder_id},
+                data={
+                    "isComplete": True,
+                    "isFulfield": True,
+                },
+                include={"orderItems": True}
+            )
+
+            if sub_order.vendorEarnings > 0:
+                vendor_user = await tx.store.find_unique(where={"id": sub_order.storeId})
+                if vendor_user:
+                    wallet = await tx.wallet.find_unique(where={"userId": vendor_user.vendorId})
+                    if not wallet:
+                        await tx.wallet.create(data={"userId": vendor_user.vendorId, "balance": 0.0})
+
+                    await tx.wallet.update(
+                        where={"userId": vendor_user.vendorId},
+                        data={"balance": {"increment": sub_order.vendorEarnings}}
+                    )
+
+                    await tx.wallettransaction.create(
+                        data={
+                            "userId": vendor_user.vendorId,
+                            "amount": sub_order.vendorEarnings,
+                            "type": "TOPUP",
+                            "description": f"Order #{sub_order.orderId} কাস্টমার গ্রহণ নিশ্চিত করায় ইনকাম ক্রেডিট।"
+                        }
+                    )
+
+        await OrderService._update_order_status(sub_order.orderId)
+
+        try:
+            await StripeConnectService.transfer_funds_to_vendor(suborder_id)
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Error transferring Stripe Connect funds for suborder {suborder_id}: {e}")
+
+        return updated_suborder
+
+    @staticmethod
     async def update_suborder_archive(suborder_id: int, is_archive: bool, vendor_id: int):
         sub_order = await prisma.suborder.find_unique(
             where={"id": suborder_id},

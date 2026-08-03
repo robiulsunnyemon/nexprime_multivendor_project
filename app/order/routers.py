@@ -112,6 +112,19 @@ async def update_suborder_completion(
         vendor_id=current_vendor.id
     )
 
+@router.patch("/sub-order/{suborder_id}/confirm-receipt", response_model=SubOrderResponse)
+async def confirm_suborder_receipt(
+    suborder_id: int,
+    current_customer = Depends(get_customer)
+):
+    """
+    কাস্টমার অর্ডারের ডেলিভারি রিসিভ নিশ্চিত করেন।
+    """
+    return await OrderService.confirm_suborder_receipt(
+        suborder_id=suborder_id,
+        user_id=current_customer.id
+    )
+
 @router.patch("/sub-order/{suborder_id}/archive", response_model=SubOrderResponse)
 async def update_suborder_archive(
     suborder_id: int,
