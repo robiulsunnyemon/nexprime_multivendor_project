@@ -160,12 +160,17 @@ class StripeConnectService:
                 detail="No Stripe Account linked to this vendor.",
             )
 
+        # Check if onboarding is completed before creating Express login link
+        if not user.isStripeOnboardingCompleted:
+            logger.info(f"Vendor {user_id} onboarding incomplete. Returning onboarding link instead of login link.")
+            return await StripeConnectService.create_onboarding_link(user_id)
+
         try:
             login_link = stripe.Account.create_login_link(user.stripeAccountId)
             return login_link.url
         except stripe.error.StripeError as e:
-            logger.error(f"Stripe Create Login Link Error: {e}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+            logger.error(f"Stripe Create Login Link Error: {e}. Falling back to onboarding link.")
+            return await StripeConnectService.create_onboarding_link(user_id)
 
     @staticmethod
     async def transfer_funds_to_vendor(sub_order_id: int) -> bool:
