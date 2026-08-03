@@ -44,7 +44,8 @@ class OrderService:
             raise HTTPException(status_code=400, detail="Cart is empty")
 
         # 2. Validate paymentMethod
-        payment_method = (order_data.paymentMethod or "ONLINE").upper()
+        raw_pm = getattr(order_data, "paymentMethod", "ONLINE") or "ONLINE"
+        payment_method = str(raw_pm).upper()
         if payment_method not in ("ONLINE", "COD"):
             raise HTTPException(status_code=400, detail="paymentMethod must be ONLINE or COD")
 

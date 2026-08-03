@@ -266,6 +266,7 @@ class PlatformCommissionUpdate(BaseModel):
 
 class OrderCreate(BaseModel):
     deliveryAddressId: int
+    paymentMethod: Optional[str] = "ONLINE"
 
 class OrderResponse(BaseModel):
     id: int
@@ -273,6 +274,7 @@ class OrderResponse(BaseModel):
     totalShippingCharge: float = 0.0
     isPaid: bool
     status: OrderStatus
+    paymentMethod: Optional[str] = "ONLINE"
     deliveryAddressId: int
     deliveryAddress: Optional[DeliveryAddressResponse] = None
     userId: int
