@@ -332,7 +332,7 @@ class OrderService:
         updated_suborder = await prisma.suborder.update(
             where={"id": suborder_id},
             data=update_data,
-            include={"orderItems": True}
+            include={"orderItems": {"include": {"product": True}}, "store": True}
         )
 
         # মেইন অর্ডারের স্ট্যাটাস আপডেট
@@ -380,7 +380,7 @@ class OrderService:
                     "isComplete": is_complete,
                     "isFulfield": True,  # সম্পূর্ণ হলে অবশ্যই শিপড হয়েছিল
                 },
-                include={"orderItems": True}
+                include={"orderItems": {"include": {"product": True}}, "store": True}
             )
 
             # ভেন্ডরের ওয়ালেটে আয় ক্রেডিট করা
@@ -433,7 +433,11 @@ class OrderService:
         """কাস্টমার কর্তৃক প্রোডাক্ট পাওয়া নিশ্চিত করা এবং ভেন্ডরের একাউন্টে টাকা ট্রান্সফার করা।"""
         sub_order = await prisma.suborder.find_unique(
             where={"id": suborder_id},
-            include={"order": True, "store": True}
+            include={
+                "order": True,
+                "store": True,
+                "orderItems": {"include": {"product": True}}
+            }
         )
         if not sub_order or sub_order.order.userId != user_id:
             raise HTTPException(status_code=403, detail="You do not own this order.")
@@ -451,7 +455,11 @@ class OrderService:
                     "isComplete": True,
                     "isFulfield": True,
                 },
-                include={"orderItems": True}
+                include={
+                    "orderItems": {"include": {"product": True}},
+                    "store": True,
+                    "order": True
+                }
             )
 
             if sub_order.vendorEarnings > 0:
