@@ -29,6 +29,7 @@ async def get_current_user(
     status_errors = {
         "SUSPEND": "Account suspended. Please contact admin.",
         "INACTIVE": "Account inactive. Please contact admin.",
+        "DELETED": "Your account has been deleted. Please contact support if this was a mistake.",
     }
     if user.status in status_errors:
         raise HTTPException(status_code=403, detail=status_errors[user.status])
@@ -77,7 +78,7 @@ async def get_optional_current_user(
 
     user = await prisma.user.find_unique(where={"id": user_id})
     if user:
-        if user.status in ["SUSPEND", "INACTIVE"]:
+        if user.status in ["SUSPEND", "INACTIVE", "DELETED"]:
             return None
         setting = await prisma.systemsetting.find_unique(where={"id": 1})
         if setting and setting.isMaintenanceModeEnabled and user.role != "ADMIN":

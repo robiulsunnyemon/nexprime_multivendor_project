@@ -28,6 +28,7 @@ from app.auth.services.auth_service import (
     logout_service,
     verify_forgot_password_service,
     reset_password_v2_service,
+    delete_account_service,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -185,3 +186,15 @@ async def reset_password(body: ResetPasswordV2Request):
 )
 async def get_profile(current_user=Depends(get_current_user)):
     return await get_profile_service(current_user)
+
+
+# ─────────────────────────────────────────────────────────
+# DELETE /auth/delete-account  (Protected)
+# ─────────────────────────────────────────────────────────
+@router.delete(
+    "/delete-account",
+    response_model=MessageResponse,
+    summary="Delete logged-in user or vendor account (Soft delete status to DELETED)",
+)
+async def delete_account(current_user=Depends(get_current_user)):
+    return await delete_account_service(current_user)

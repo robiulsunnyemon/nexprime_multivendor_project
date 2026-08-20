@@ -13,6 +13,7 @@ class AccountStatus(str, Enum):
     ACTIVE = "ACTIVE"
     SUSPEND = "SUSPEND"
     INACTIVE = "INACTIVE"
+    DELETED = "DELETED"
 
 class UserResponse(BaseModel):
     id: int

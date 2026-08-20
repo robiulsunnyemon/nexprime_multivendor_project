@@ -407,6 +407,7 @@ async def login_service(email: str, password: str) -> dict:
     status_errors = {
         "SUSPEND": "Account suspended. Please contact admin.",
         "INACTIVE": "Account inactive. Please contact admin.",
+        "DELETED": "Your account has been deleted. Please contact support if you wish to reactivate your account.",
     }
     if user.status in status_errors:
         raise HTTPException(status_code=403, detail=status_errors[user.status])
@@ -599,3 +600,21 @@ async def reset_password_v2_service(reset_token: str, new_password: str) -> dict
     )
 
     return {"message": "Password changed successfully."}
+
+
+async def delete_account_service(current_user) -> dict:
+    db_user = await prisma.user.find_unique(where={"id": current_user.id})
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User account not found.")
+
+    if db_user.status == "DELETED":
+        raise HTTPException(status_code=400, detail="Account is already deleted.")
+
+    await prisma.user.update(
+        where={"id": current_user.id},
+        data={"status": "DELETED"},
+    )
+
+    await prisma.refreshtoken.delete_many(where={"userId": current_user.id})
+
+    return {"message": "Your account has been deleted successfully."}
